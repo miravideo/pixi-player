@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PIXI.Player</title>
+</head>
+<body>
+<style>
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0px;
+  padding: 0px;
+}
+#root {
+  display:flex;
+  width: 90%;
+  height: 60%;
+  padding: 15px;
+}
+div {
+  /* clear */
+  margin: 0px;
+  padding: 0px;
+}
+
+#container {
+  width: 30%;
+  height: 100%;
+  margin-left: 10px;
+}
+#miraml {
+  width: 50%;
+  height: 100%;
+}
+</style>
+
+<div id="root">
+  <textarea id="miraml">
+<canvas width="1280" height="720">
+  <spine>
+    <video width="100vw" src="https://cos.mirav.cn/player/pic_oceans.mp4" duration="3" ss="2">
+    </video>
+    <trans key="fade" duration="1"></trans>
+    <scene duration="2">
+      <video width="100vw" src="https://cos.mirav.cn/player/pic_oceans.mp4" duration="2" ss="26"></video>
+      <image width="60vw" src="https://cos.mirav.cn/player/pic1.jpg"></image>
+    </scene>
+    <trans key="cube" duration="1"></trans>
+    <video width="100vw" src="https://cos.mirav.cn/player/pic_oceans.mp4" duration="2" ss="16">
+      <keyframes time="0" scale="1"/>
+      <keyframes time="1" scale="2"/>
+      <keyframes time="2" scale="1"/>
+    </video>
+  </spine>
+  <text fontSize="50rpx" color="#FFFFFF" font="https://cos.mirav.cn/fonts/OPPOSansLight.ttf">
+  <content>PIXI Player</content>
+  </text>
+</canvas>
+  </textarea>
+  <div id="container"></div>
+</div>
+<script src="./dist/pixi-player-core.js" charset="utf-8"></script>
+<script src="./dist/pixi-player-ui.js" charset="utf-8"></script>
+<script>
+let player;
+if (window["pixi-player"]?.init) {
+  player = window["pixi-player"]?.init(
+    document.getElementById('container'), 
+    { value: document.getElementById('miraml').value },
+  );
+}
+
+var input = document.querySelector('input[type=file]');
+if (input) input.addEventListener('change', async () => {
+  console.log('change', input.files);
+  const file = input.files[0];
+  const url = URL.createObjectURL(file);
+
+  const video = document.createElement('video');
+  video.setAttribute('webkit-playsinline', '');
+  video.setAttribute('playsinline', '');
+  video.setAttribute('muted', '');
+  video.setAttribute('autoload', '');
+  video.setAttribute('controls', '');
+  video.setAttribute('preload', 'auto');
+  video.setAttribute('crossOrigin', 'Anonymous'); // 必须设置，不然可能*污染*canvas
+
+  video.addEventListener('loadedmetadata', async () => {
+
+  });
+  video.src = url;
+
+});
+
+const resizeBtn = document.getElementById('resize');
+if (resizeBtn) resizeBtn.addEventListener('click', () => {
+  player.core.resize(720, 1280);
+});
+
+const destroyBtn = document.getElementById('destroy');
+if (destroyBtn) destroy.addEventListener('click', () => {
+  player.destroy();
+});
+
+const reloadBtn = document.getElementById('reload');
+if (reloadBtn) reloadBtn.addEventListener('click', () => {
+  player.load({ value: document.getElementById('miraml').value });
+});
+</script>
+</body></html>
