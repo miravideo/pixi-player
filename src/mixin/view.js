@@ -1,0 +1,25 @@
+import PluginUtil from '../util/plugin';
+
+const ViewNode = {
+  initHook(obj) {
+    PluginUtil
+      .wrap(obj.prototype, 'createView')
+      .after(function (args, view) {
+        return this._vn_updateViewAttr(view);
+      });
+  },
+  _vn_updateViewAttr(view) {
+    if (!view || !view.attr) return;
+    const keys = this.viewAttrKeys || ['x', 'y', 'width', 'height', 'anchor', 'alpha', 'rotation'];
+    const attrs = {};
+    for (const key of keys) {
+      const val = this.getConf(key);
+      if (val !== undefined) attrs[key] = val;
+    }
+    view.attr(attrs);
+    // console.log('ViewNode.updateViewAttr', this.id, view, attrs);
+    return view;
+  }
+};
+
+export default ViewNode;
