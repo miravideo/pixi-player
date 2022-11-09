@@ -49,6 +49,7 @@
     "md5": "^2.3.0",
     "mobx": "^6.6.1",
     "mobx-react-lite": "^3.4.0",
+    "mp4-wasm": "^1.0.6",
     "ndarray": "^1.0.19",
     "omggif": "^1.0.10",
     "path-browserify": "^1.0.1",

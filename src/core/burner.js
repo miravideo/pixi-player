@@ -1,5 +1,6 @@
 import EventEmitter from "eventemitter3";
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
+import loadMP4Module, { isWebCodecsSupported } from "mp4-wasm";
 import Queue from '../util/queue';
 import XhrUtil from '../util/xhr';
 import AudioUtil from '../util/audio';
@@ -15,7 +16,7 @@ const FORMAT = 'jpeg'; // jpeg | bmp
 const DEFAULT_OPTS = {
   useCache: true,
   useSingleThread: Utils.isMoble(),
-  preset: 'ultrafast', crf: '23', format: FORMAT,
+  preset: 'faster', crf: 23, format: FORMAT,
   maxQueueLen: MAX_Q_LEN, clipSize: CLIP_SIZE,
   corePath: 'https://cos.mirav.cn/player/ffmpeg/',
   coreStPath: 'https://cos.mirav.cn/player/ffmpeg-st/',
@@ -30,11 +31,8 @@ const WASM_FILES = {
 class Burner extends EventEmitter {
   constructor(opts) {
     super();
-
     this.opts = {...DEFAULT_OPTS, ...opts};
     this.burning = false;
-    this.extractQueue = new Queue();
-    this.clipBurnQueue = new Queue();
   }
 
   async init(progress=()=>{}) {
@@ -78,14 +76,18 @@ class Burner extends EventEmitter {
     }
 
     if (this.opts.useSingleThread) _config['mainName'] = 'main';
-    this.ffmpeg = createFFmpeg({ 
-      log: false,
-      logger: ({type, message}) => console.log(type, message),
-      ..._config,
+    this.ffmpegConfig = _config;
+
+    const mwUrl = 'https://cos.mirav.cn/player/mp4.wasm';
+    const mp4wasm = await XhrUtil.getCachedURL(mwUrl, 'burner', (p) => {
+      console.log('load mw', p);
+    });
+    this.mp4wasm = await loadMP4Module({
+      getWasmPath: (path, dir, simd) => {
+        return mp4wasm.url;
+      }
     });
 
-    // start load
-    await this.ffmpeg.load();
     this.emit('ready');
     progress && progress(1.0);
   }
@@ -95,260 +97,124 @@ class Burner extends EventEmitter {
   }
 
   async start(player, progress=()=>{}) {
-    if (!this.ffmpeg.isLoaded()) await this.ffmpeg.load();
     if (this.burning) return false;
     if (!player || !player.duration) {
       console.log('Player not ready!');
       return false;
     }
+
+    progress && progress(0.001);
+
+    // ffmpeg load
+    const ffmpeg = createFFmpeg({ 
+      log: false,
+      ...this.ffmpegConfig,
+    });
+
+    // start load
+    await ffmpeg.load();
+    progress && progress(0.05);
+
     this.jobId = Utils.genUuid();
     this.emit('start', { id: this.jobId });
 
-    this.player = player;
-    this.onProgress = progress;
-    this.burnStart = Date.now();
     this.burning = true;
     this.cancelled = false;
-    this.extractEnded = false;
-    this.clipIdx = 0;
-    this.clips = []; // for st-core reload cache
 
+    const burnStart = performance.now();
+    const { audioSampleRate, width, height, duration, fps } = player;
+    const { speed, crf } = this.opts;
+
+    const videoEncoder = this.mp4wasm.createWebCodecsEncoder({
+      width, height, fps,
+      acceleration: 'prefer-hardware',
+      groupOfPictures: 1024, // just a large number
+      codec: 'avc1.640834',
+      bitrate: Math.round(width * height * fps * 0.02),
+    });
+
+    const tick = 1 / fps;
+    let timer = 0, audioCursor = 0;
+    let videoBurnRes = null;
     // for audio
-    const { audioSampleRate, duration } = player;
-    this.audioCursor = 0;
-    this.audioData = new Float32Array(Math.round(2 * duration * audioSampleRate));
+    const audioData = new Float32Array(Math.round(2 * duration * audioSampleRate));
+    while (true) {
+      if (timer > duration || this.cancelled) break;
 
-    this._clipProg = 0;
-    this._extractProg = 0;
-    this._timer = 0;
-    this.extract();
-    this.onProgress && this.onProgress(0.001);
-    return new Promise((resolve) => {
-      this.once('done', (e) => {
-        resolve(e.id === this.jobId ? e.output : null);
-      });
-    });
-  }
+      // video
+      const imgPromise = player.getFrameImageData(timer, { format: 'bitmap' });
 
-  updateProgress() {
-    const p = this._clipProg * 0.6 + this._extractProg * 0.4;
-    // console.log('ppp', [this._clipProg, this._extractProg]);
-    const progress = Math.max(0.001, p * 0.98);
-    this.onProgress && this.onProgress(progress);
-    this.emit('progress', { id: this.jobId, progress });
-  }
+      // audio
+      const size = Math.round((timer + tick) * audioSampleRate) - (audioCursor / 2);
+      const audioPromise = player.getFrameAudioData(timer, { size });
 
-  extract() {
-    this.extracting = true;
-    this.extractQueue.enqueue(async () => {
-      if (this.cancelled) return;
-      const bufferArr = [];
-      const { clipSize, format } = this.opts;
-      const { audioSampleRate, duration, fps } = this.player;
-      const tick = 1 / fps;
-      for (let i = 0; i < clipSize; i++) {
-        if (this._timer > duration) {
-          this.extractEnded = true;
-          break;
-        }
+      const [imageBitmap, audioBuffer, _] = await Promise.all([imgPromise, audioPromise, videoBurnRes]);
+      if (this.cancelled) break;
 
-        // video
-        if (this.cancelled) return;
-        const imageData = await this.player.getFrameImageData(this._timer, { format });
-        if (this.cancelled) return;
-        bufferArr.push(imageData);
+      videoBurnRes = videoEncoder.addFrame(imageBitmap);
 
-        // audio
-        const size = Math.round((this._timer + tick) * audioSampleRate) - (this.audioCursor / 2);
-        const abuffer = await this.player.getFrameAudioData(this._timer, { size });
-        if (this.cancelled) return;
-        const _adata = AudioUtil.interleave(abuffer.getChannelData(0), abuffer.getChannelData(1));
-        // console.log('set audio', this.audioCursor, size, this.audioCursor / this.audioData.length);
-        this.audioData.set(_adata, this.audioCursor);
-        this.audioCursor += _adata.length;
+      const _adata = AudioUtil.interleave(audioBuffer.getChannelData(0), audioBuffer.getChannelData(1));
+      // console.log('set audio', audioCursor, size, audioCursor / audioData.length);
+      audioData.set(_adata, audioCursor);
+      audioCursor += _adata.length;
 
-        this._timer += tick;
-        this._extractProg = (this._timer / duration);
-        this.updateProgress();
-      }
+      timer += tick;
 
-      this.extracting = false;
-      if (bufferArr.length > 0) this.burnClip(bufferArr);
-      // concatClip跟burnClip走同一个queue, 所以不用await直接调用
-      if (this.extractEnded) {
-        return this.concatClip();
-      }
-      // next batch
-      if (bufferArr.length == this.opts.clipSize && this.clipBurnQueue.queue.length < this.opts.maxQueueLen) {
-        // console.log('next....', this.clipBurnQueue.queue.length);
-        this.extract();
+      const cost = (performance.now() - burnStart) * 0.001;
+      const sx = timer / cost;
+      const prog = 0.05 + (0.9 * (timer / duration));
+      progress && progress(prog);
+      // console.log('progress', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
+    }
+
+    const video = await videoEncoder.end();
+    ffmpeg.FS('writeFile', 'video.mp4', video);
+
+    // debug
+    this.debugShowVideo(URL.createObjectURL(new Blob([video], { type: "video/mp4" })));
+
+    const audio = AudioUtil.encodeWAV(audioData, 3, audioSampleRate, 2, 32);
+    const ab = new DataView(audio).buffer;
+    ffmpeg.FS("writeFile", 'audio.wav', new Uint8Array(ab, 0, ab.byteLength));
+
+    ffmpeg.setLogger(({ type, message }) => {
+      if (!message) return;
+      const res = message.match(/time=\s*([\d\:\.]+)\s*bitrate=[\s\d.]+kbits\/s\s*speed=/);
+      if (res && res[1]) {
+        const comp = hmsToSeconds(res[1]);
+        progress && progress(0.95 + 0.04 * (comp / duration));
+        console.log('ffmpeg progress', res[1], comp);
       } else {
-        // pause extract
-        // console.log('pause extract', this.clipBurnQueue.queue.length);
+        // console.log({type, message});
       }
     });
-  }
 
-  burnClip(bufferArr) {
-    this.clipBurnQueue.enqueue(async () => {
-      const { ffmpeg } = this;
-      if (!ffmpeg.isLoaded()) return;
-      const ss = performance.now();
+    const out = `out.mp4`;
+    const cmds = [
+      '-i', 'video.mp4', 
+      '-i', 'audio.wav', 
+      "-c:v", "copy", // 必须要，否则很慢
+      out];
+    await ffmpeg.run(...cmds);
+    progress && progress(0.99);
 
-      const { fps, duration } = this.player;
-      const cc = `${this.clipIdx}`.padStart(5, 0);
-      const out = `clip_${cc}.mp4`;
+    this.burning = false;
+    const qt = (performance.now() - burnStart) * 0.001;
+    const output = ffmpeg.FS("readFile", out);
+    const url = URL.createObjectURL(new Blob([output.buffer], { type: "video/mp4" }));
+    const size = `${(output.length / (1000 * 1000)).toFixed(2)}M`;
+    const sx = duration / qt;
+    this.emit('done', { id: this.jobId , output: url, qt, speed: sx, size });
+    console.log('done', `${sx.toFixed(2)}x`, size);
 
-      const totalClip = Math.ceil(duration / (this.opts.clipSize / fps));
-      ffmpeg.setLogger(({ type, message }) => {
-        if (!message) return;
-        const res = message.match(/time=\s*([\d\:\.]+)\s*bitrate=[\s\d.]+kbits\/s\s*speed=/);
-        if (res && res[1]) {
-          const total = bufferArr.length / fps;
-          const comp = hmsToSeconds(res[1]);
-          this._clipProg = ((this.clipIdx - 1) / totalClip) + ((1 / totalClip) * (comp / total));
-          // console.log('burn progress', out, comp, total, this._clipProg);
-          this.updateProgress();
-        }
-      });
+    ffmpeg.FS("unlink", 'video.mp4');
+    ffmpeg.FS("unlink", 'audio.wav');
+    ffmpeg.FS("unlink", out);
 
-      // todo: move to extract?
-      this.clipIdx++;
-      const prefix = `c${this.clipIdx}_`;
-      const inputs = [];
-      for (let i = 0; i < bufferArr.length; i++) {
-        const buffer = bufferArr[i];
-        const ii = `${i}`.padStart(5, 0);
-        const filename = `${prefix}${ii}.${this.opts.format}`;
-        inputs.push(filename);
-        const data = buffer instanceof ImageData ? buffer.data : 
-                      new Uint8Array(buffer, 0, buffer.byteLength);
-        ffmpeg.FS("writeFile", filename, data);
-      }
+    this.burning = false;
+    ffmpeg.exit();
 
-      // const listDir = ffmpeg.FS('readdir', '/');
-      // console.log('read dir', listDir);
-
-      let formatCmds = [];
-      // if (this.opts.format === 'bmp') {
-      //   const pixel_format = 'rgba';
-      //   const video_size = `${this.player.width}x${this.player.height}`;
-      //   formatCmds = [
-      //     '-s', video_size, '-vcodec', 'rawvideo', 
-      //     '-pixel_format', pixel_format, '-video_size', video_size
-      //   ];
-      // }
-
-      const cmds = [
-        "-framerate", `${fps}`, "-pattern_type", "glob", 
-        ...formatCmds,
-        "-i", `${prefix}*.${this.opts.format}`,
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", 
-        '-profile:v', 'main', // profile:v - main profile: mainstream image quality. Provide I / P / B frames
-        '-preset', this.opts.preset, // preset - compromised encoding speed
-        '-crf', this.opts.crf, // crf - The range of quantization ratio is 0 ~ 51, where 0 is lossless mode, 23 is the default value, 51 may be the worst
-        '-movflags', 'faststart',
-        out];
-      await ffmpeg.run(...cmds);
-
-      for (const filename of inputs) {
-        ffmpeg.FS("unlink", filename);
-      }
-
-      // console.log('burn clip', this.clipIdx, totalClip, this.clipIdx / totalClip, performance.now() - ss);
-      this._clipProg = this.clipIdx / totalClip;
-      this.updateProgress();
-
-      // const _output = ffmpeg.FS("readFile", out);
-      // const _url = URL.createObjectURL(new Blob([_output.buffer], { type: "video/mp4" }));
-      // this.debugShowVideo(_url);
-
-      if (this.opts.useSingleThread) {
-        // A walkround for reuse bug: https://github.com/ffmpegwasm/ffmpeg.wasm/issues/330
-        this.clips.push({ file: out, data: ffmpeg.FS("readFile", out) });
-        // const ss = Date.now();
-        await ffmpeg.exit();
-        await ffmpeg.load();
-        // console.log('reload ffmpeg', Date.now() - ss);
-      }
-
-      if (this.burning && !this.extracting && !this.extractEnded
-         && this.clipBurnQueue.queue.length < this.opts.maxQueueLen) {
-        // restart extract
-        // console.log('restart extract', this.clipBurnQueue.queue.length);
-        this.extract();
-      }
-    });
-  }
-
-  concatClip() {
-    this.clipBurnQueue.enqueue(async () => {
-      const { ffmpeg } = this;
-      if (!ffmpeg.isLoaded()) return;
-
-      let files = [];
-      if (this.opts.useSingleThread) {
-        for (const { file, data } of this.clips) {
-          ffmpeg.FS('writeFile', file, data);
-          files.push(file);
-        }
-      } else {
-        const listDir = ffmpeg.FS('readdir', '/');
-        files = listDir.filter(x => x.startsWith('clip') && x.endsWith('mp4'));
-      }
-      const concats = files.map(file => `file '${file}'`).join("\n");
-      ffmpeg.FS('writeFile', 'concat_list.txt', concats);
-
-      // Todo: audio只能在最后拼，否则每个clip之间会有一帧是没有声音的
-      const audio = AudioUtil.encodeWAV(this.audioData, 3, this.player.audioSampleRate, 2, 32);
-      const ab = new DataView(audio).buffer;
-      ffmpeg.FS("writeFile", 'audio.wav', new Uint8Array(ab, 0, ab.byteLength));
-
-      // const _url = URL.createObjectURL(new Blob([new DataView(audio)], { type: "audio/wav" }));
-      // this.debugShowVideo(_url);
-      // return;
-
-      ffmpeg.setLogger(({ type, message }) => {
-        if (!message) return;
-        const res = message.match(/time=\s*([\d\:\.]+)\s*bitrate=[\s\d.]+kbits\/s\s*speed=/);
-        if (res && res[1]) {
-          const total = (this.opts.clipSize * files.length) / fps;
-          // console.log('concat progress', out, res[1], total);
-        } else {
-          // console.log({type, message});
-        }
-      });
-
-      const out = `out.mp4`;
-      const cmds = ['-f', 'concat', '-safe', '0', 
-        '-i', 'concat_list.txt', 
-        '-i', 'audio.wav', 
-        "-c:v", "copy", // 必须要，否则很慢
-        out];
-      await ffmpeg.run(...cmds);
-      this.onProgress && this.onProgress(0.99);
-
-      for (const filename of files) {
-        ffmpeg.FS("unlink", filename);
-      }
-      ffmpeg.FS("unlink", 'audio.wav');
-
-      this.burning = false;
-      const qt = (Date.now() - this.burnStart) * 0.001;
-      const output = ffmpeg.FS("readFile", out);
-      const url = URL.createObjectURL(new Blob([output.buffer], { type: "video/mp4" }));
-      this.emit('done', { id: this.jobId , output: url, qt });
-      console.log('burn done', { id: this.jobId , output: url, qt });
-
-      // reset
-      this.clips = null;
-      this.clipIdx = null;
-      this.audioData = null;
-      this.audioCursor = null;
-      this.onProgress = null;
-      await ffmpeg.exit();
-      await ffmpeg.load();
-    });
+    return url;
   }
 
   debugShowVideo(url, appendId=true) {
@@ -374,25 +240,12 @@ class Burner extends EventEmitter {
   async cancel() {
     if (!this.burning) return;
     this.cancelled = true;
-    this.emit('done', { id: this.jobId , output: null });
-    if (this.ffmpeg) await this.ffmpeg.exit();
-    this.extractQueue.destroy();
-    this.extractQueue = new Queue();
-    this.clipBurnQueue.destroy();
-    this.clipBurnQueue = new Queue();
-    this.audioData = null;
-    this.clips = null;
-    this.onProgress = null;
     this.burning = false;
   }
 
   async destroy() {
     this.cancel();
-    this.player = null;
     this.opts = null;
-    this.extractQueue = null;
-    this.clipBurnQueue = null;
-    this.ffmpeg = null;
   }
 }
 

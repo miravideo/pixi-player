@@ -45,6 +45,8 @@ class Store extends EventEmitter {
       loadingProgress: observable,
       canvasStyle: observable,
       muted: observable,
+      duration: observable,
+      currentTime: observable,
 
       timePercent: observable,
       timeHandlerShow: observable,
@@ -147,13 +149,7 @@ class Store extends EventEmitter {
       }
     }).on('loadedmetadata', meta => {
       this.focus();
-      this.toast();
-      runInAction(() => {
-        this.loading = false;
-        this.loaded = true;
-        this.duration = meta.duration;
-        this.cancelFunc = null;
-      });
+      this.hideToast();
     }).on('timeupdate', (e) => {
       runInAction(() => {
         this.currentTime = e.currentTime;
@@ -358,12 +354,24 @@ class Store extends EventEmitter {
         const res = this.player.toMiraML();
         this.copyToPB(res);
       }});
-  
-      items.push('-');
-      items.push({ title: 'PIXI Player', desc: `v${version}`});
+    }
+
+    if (this.canvasStyle.width) {
+      if (this.canvasStyle.width < 250) {
+        items.push({ title: 'Sound', desc: this.muted ? 'Off' : 'On', action: () => {
+          this.toggleMute();
+        }});
+      }
+      if (this.canvasStyle.width < 300) {
+        items.push({ title: 'Export Video', action: () => {
+          this.export();
+        }});
+      }
     }
 
     if (items.length > 0) {
+      items.push('-');
+      items.push({ title: 'PIXI Player', desc: `v${version}`});
       runInAction(() => {
         this.showMenu = { items };
       });

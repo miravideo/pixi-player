@@ -161,7 +161,7 @@ const Loading = observer(({store}) => {
           r={pr} strokeDasharray={Math.PI*2*pr} 
           strokeDashoffset={(1-store.loadingProgress)*Math.PI*2*pr}></circle>
       </svg>
-      <span>{Math.round(100*store.loadingProgress)}</span>
+      <span>{(100*store.loadingProgress).toFixed(1)}</span>
       <button onClick={() => store.cancelLoading()}>×</button>
     </LoadingContainer>
   );
@@ -277,6 +277,7 @@ const Time = styled.div`
   font-weight: 350;
   font-family: Noto Sans,Helvetica Neue,Helvetica,PingFang SC!important;
   line-height: 45px;
+  white-space: nowrap;
 `;
 
 const Space = styled.div`
@@ -351,10 +352,16 @@ const Controls = observer(({store}) => {
       <Buttons>
         <Button className={store.playing ? 'pause-button' : 'play-button'} 
           onClick={(e) => store.togglePlay()}></Button>
-        <Time>{Utils.formatTime(store.currentTime)} / {Utils.formatTime(store.duration)}</Time>
+        { !store.canvasStyle || store.canvasStyle.width < 200 ? null :
+          <Time>{Utils.formatTime(store.currentTime)} / {Utils.formatTime(store.duration)}</Time>
+        }
         <Space></Space>
-        <Button className={store.muted ? 'sound-off-button' : 'sound-on-button'} onClick={() => store.toggleMute()}></Button>
-        <Button className="export-button" onClick={() => store.export()}></Button>
+        { !store.canvasStyle.width || store.canvasStyle.width < 250 ? null :
+          <Button className={store.muted ? 'sound-off-button' : 'sound-on-button'} onClick={() => store.toggleMute()}></Button>
+        }
+        { !store.canvasStyle.width || store.canvasStyle.width < 300 ? null :
+          <Button className="export-button" onClick={() => store.export()}></Button>
+        }
         { store.hideMenuButton ? null : 
           <Button className="more-button" {...triggerProps} onClick={() => store.menuShow()}></Button>
         }

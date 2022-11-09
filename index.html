@@ -70,42 +70,5 @@ if (window["pixi-player"]?.init) {
     { value: document.getElementById('miraml').value },
   );
 }
-
-var input = document.querySelector('input[type=file]');
-if (input) input.addEventListener('change', async () => {
-  console.log('change', input.files);
-  const file = input.files[0];
-  const url = URL.createObjectURL(file);
-
-  const video = document.createElement('video');
-  video.setAttribute('webkit-playsinline', '');
-  video.setAttribute('playsinline', '');
-  video.setAttribute('muted', '');
-  video.setAttribute('autoload', '');
-  video.setAttribute('controls', '');
-  video.setAttribute('preload', 'auto');
-  video.setAttribute('crossOrigin', 'Anonymous'); // 必须设置，不然可能*污染*canvas
-
-  video.addEventListener('loadedmetadata', async () => {
-
-  });
-  video.src = url;
-
-});
-
-const resizeBtn = document.getElementById('resize');
-if (resizeBtn) resizeBtn.addEventListener('click', () => {
-  player.core.resize(720, 1280);
-});
-
-const destroyBtn = document.getElementById('destroy');
-if (destroyBtn) destroy.addEventListener('click', () => {
-  player.destroy();
-});
-
-const reloadBtn = document.getElementById('reload');
-if (reloadBtn) reloadBtn.addEventListener('click', () => {
-  player.load({ value: document.getElementById('miraml').value });
-});
 </script>
 </body></html>

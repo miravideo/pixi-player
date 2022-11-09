@@ -154,6 +154,10 @@ class Player extends EventEmitter {
 
     // init draw
     this.render();
+
+    this.emit('loadedmetadata', {
+      duration: this.duration, width: this.width, height: this.height
+    });
   }
 
   videoDelays() {
@@ -321,6 +325,10 @@ class Player extends EventEmitter {
     const view = this.rootNode.getView(vtype);
     await this.rootNode.draw(time, vtype);
     burner.render(view);
+
+    if (opts?.format === 'bitmap') {
+      return await createImageBitmap(burner.view);
+    }
 
     const useRaw = opts?.format === 'bmp';
     return new Promise((resolve) => {
