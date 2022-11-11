@@ -7,7 +7,7 @@ const CacheUtil = {
   async cacheNode(node, cid, progress, force=false) {
     const { type, src, path, url, fontFamily, font, preload } = node.conf;
     let source = src || path || url;
-    let fontUrl = font || fontFamily;
+    let fontUrl = font || fontFamily || '';
     if (type === 'text' && fontUrl.startsWith('http') && (force || preload !== false)) { // default preload=true
       const { url } = await XhrUtil.getCachedURL(fontUrl, cid, progress);
       node.conf.cachedFont = url;

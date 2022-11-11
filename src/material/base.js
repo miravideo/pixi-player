@@ -28,12 +28,16 @@ class Material {
     return this.node && (this.node.getConf('cachedSrc') || this.node.getConf('src'));
   }
 
-  get volume() {
-    return this.node && this.node.getConf('volume');
+  get duration() {
+    return this.node && this.node.duration;
   }
 
   get speed() {
     return this.node && this.node.getConf('speed');
+  }
+
+  get volume() {
+    return this.node && this.node.getConf('volume');
   }
 
   get fps() {

@@ -6,9 +6,9 @@ import Queue from '../util/queue';
 import CacheUtil from '../util/cache';
 import XhrUtil from '../util/xhr';
 import AudioUtil from '../util/audio';
-import VideoHolder from '../util/video';
+// import VideoHolder from '../util/video';
+import VideoSource from '../util/video-source';
 import STATIC from './static';
-import { resolve } from 'path-browserify';
 
 class Player extends EventEmitter {
   constructor(opts={}) {
@@ -68,10 +68,12 @@ class Player extends EventEmitter {
     for (const node of allNodes) {
       i++;
       const baseProgress = cacheRate + r * (i - 1);
+      // console.log('preloading', node.id);
       await node.preload((p) => {
         onprogress && onprogress(baseProgress + r * p);
       });
       onprogress && onprogress(cacheRate + r * i);
+      // console.log('preloaded', node.id);
     }
 
     // annotate
@@ -460,7 +462,8 @@ class Player extends EventEmitter {
     this.tickerCallback = null;
     XhrUtil.clear(this.id);
     AudioUtil.clear(this.id);
-    VideoHolder.release(this.id);
+    VideoSource.clear(this.id);
+    // VideoHolder.release(this.id);
   }
 }
 

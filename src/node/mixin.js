@@ -24,7 +24,6 @@ class Mixin extends Display {
         node = _node;
       }
       this.node = node;
-      console.log(node);
       this.addChild(node);
     }
   }

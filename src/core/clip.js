@@ -521,7 +521,7 @@ class Clip extends EventEmitter {
     if (!isNaN(duration)) return this.startTime + duration;
     const defaultEnd = this.time(this.default.endTime);
     if (defaultEnd > this.startTime) return defaultEnd;
-    return this.startTime + 3; // 默认3秒
+    return this.startTime + (this.material?.length || 3); // 默认3秒
   }
 
   get flexibleDuration() {

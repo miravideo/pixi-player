@@ -145,18 +145,21 @@ class Burner extends EventEmitter {
       const imgPromise = player.getFrameImageData(timer, { format: 'bitmap' });
 
       // audio
-      const size = Math.round((timer + tick) * audioSampleRate) - (audioCursor / 2);
-      const audioPromise = player.getFrameAudioData(timer, { size });
+      const size = Math.min(audioData.length / 2, Math.round((timer + tick) * audioSampleRate)) - (audioCursor / 2);
+      const audioPromise = size ? player.getFrameAudioData(timer, { size }) : null;
 
       const [imageBitmap, audioBuffer, _] = await Promise.all([imgPromise, audioPromise, videoBurnRes]);
       if (this.cancelled) break;
 
       videoBurnRes = videoEncoder.addFrame(imageBitmap);
+      imageBitmap.close();
 
-      const _adata = AudioUtil.interleave(audioBuffer.getChannelData(0), audioBuffer.getChannelData(1));
-      // console.log('set audio', audioCursor, size, audioCursor / audioData.length);
-      audioData.set(_adata, audioCursor);
-      audioCursor += _adata.length;
+      if (audioBuffer) {
+        const _adata = AudioUtil.interleave(audioBuffer.getChannelData(0), audioBuffer.getChannelData(1));
+        // console.log('set audio', timer, audioCursor, size, audioCursor / audioData.length);
+        audioData.set(_adata, audioCursor);
+        audioCursor += _adata.length;
+      }
 
       timer += tick;
 
@@ -164,7 +167,7 @@ class Burner extends EventEmitter {
       const sx = timer / cost;
       const prog = 0.05 + (0.9 * (timer / duration));
       progress && progress(prog);
-      // console.log('progress', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
+      // console.log('burning', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
     }
 
     const video = await videoEncoder.end();
@@ -202,7 +205,7 @@ class Burner extends EventEmitter {
     const qt = (performance.now() - burnStart) * 0.001;
     const output = ffmpeg.FS("readFile", out);
     const url = URL.createObjectURL(new Blob([output.buffer], { type: "video/mp4" }));
-    const size = `${(output.length / (1000 * 1000)).toFixed(2)}M`;
+    const size = `${(output.length / (1024 ** 2)).toFixed(2)} MiB`;
     const sx = duration / qt;
     this.emit('done', { id: this.jobId , output: url, qt, speed: sx, size });
     console.log('done', `${sx.toFixed(2)}x`, size);

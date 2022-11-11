@@ -95,8 +95,9 @@ class ImageMaterial extends Material {
     if (!canvas) return; // may destroyed
     const ctx = canvas.getContext('2d');
     // todo: blur移到init里??
-    if (this.blur > 0 && !disableBlur) {
-      ctx.filter = `blur(${this.blur}px)`;
+    const { blur } = this;
+    if (blur > 0 && !disableBlur) {
+      ctx.filter = `blur(${blur}px)`;
       img = this.getImage(img); // 如果是ImageData, 直接put就无效了?
     }
     if (img instanceof ImageData) {

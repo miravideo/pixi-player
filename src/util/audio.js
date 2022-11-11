@@ -21,24 +21,12 @@ const AudioUtil = {
       if (!res || !res.data) return resolve();
       // const res = await fetch(path, { method: 'GET', responseType: 'arraybuffer' });
       const fileData = await res.data.arrayBuffer();
-
       ctx.decodeAudioData(fileData, (buffer) => {
-        // buffer = {length: 3130041, duration: 70.92, sampleRate: 44100, numberOfChannels: 2}
-        // if (tail > 0) {
-        //   // 在音频末尾补上一段静音，避免SoundTouch播放的时候把尾巴吞掉了
-        //   const tailLen = Math.round(tail * buffer.sampleRate);
-        //   const n = buffer.numberOfChannels;
-        //   const _buffer = ctx.createBuffer(n, buffer.length + tailLen, buffer.sampleRate);
-        //   const _tail = new Float32Array(tailLen);
-        //   for (var i = 0; i < n; i++) {
-        //     const channel = _buffer.getChannelData(i);
-        //     channel.set(buffer.getChannelData(i), 0);
-        //     channel.set(_tail, buffer.length);
-        //   }
-        //   buffer = _buffer;
-        // }
-      if (__cache[cid]) __cache[cid][path] = buffer;
+        if (__cache[cid]) __cache[cid][path] = buffer;
         resolve(buffer);
+      }, (e) => {
+        console.log(e);
+        resolve();
       });
     });
     __cache[cid][path] = promise;
