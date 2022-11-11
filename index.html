@@ -55,6 +55,9 @@ div {
   </spine>
   <text fontSize="50rpx" color="#FFFFFF" font="https://cos.mirav.cn/fonts/OPPOSansLight.ttf">
   <content>PIXI Player</content>
+  <!-- <mixin-canvas duration="3" width="50vw" height="50vh"></mixin-canvas>
+  <mixin-node duration="3" xxx="123"></mixin-node>
+  <mixin-view duration="3" xxx="456"></mixin-view> -->
   </text>
 </canvas>
   </textarea>
@@ -65,9 +68,40 @@ div {
 <script>
 let player;
 if (window["pixi-player"]?.init) {
+  const { PIXI } = window["pixi-player"];
   player = window["pixi-player"]?.init(
     document.getElementById('container'), 
-    { value: document.getElementById('miraml').value },
+    {
+      value: document.getElementById('miraml').value,
+      mixin: {
+        'mixin-node': {
+          createNode() {
+            return `<text content="${this.getConf('xxx')}" fontSize="60" y="30vh"></text>`;
+          }
+        },
+        'mixin-view': {
+          createPixiView() {
+            const view = new PIXI.Text(this.getConf('xxx'), { fontSize: 82, fill: '#FF0000' });
+            return view;
+          }
+        },
+        'mixin-canvas': {
+          async render(nodeTime, playing, view) {
+            const canvas = view.source;
+            canvas.width = this.getConf('width') / 4;
+            canvas.height = this.getConf('height') / 4;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#1FB0F9';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(10 + (nodeTime * 3), 10, 10, 10);
+            ctx.fillText(nodeTime, 10, 50);
+            view.source = canvas;
+          }
+        },
+      },
+    },
   );
 }
 </script>
