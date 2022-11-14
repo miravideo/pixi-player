@@ -12,4 +12,5 @@ export default {
   Burner,
   STATIC,
   PIXI,
+  regMixin: Builder.regMixin.bind(Builder)
 };

@@ -114,6 +114,7 @@ class MP4Decoder {
     let { width, height } = this.meta;
 
     const t = frame.timestamp / 1e6;
+    // console.log('frame', t, frame.format, frame.colorSpace.matrix);
     if (t >= start && t <= end) {
       this.videoFrames.push({ image: this.getImage(frame), t });
     }
