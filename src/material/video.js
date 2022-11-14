@@ -17,11 +17,11 @@ class VideoMaterial extends ImageMaterial {
     this.queue = new Queue();
 
     // todo: use audio decoder
-    await this.loadAudioBuffer((p) => {
-      onprogress && onprogress(p * 0.9);
-    });
+    // await this.loadAudioBuffer((p) => {
+    //   onprogress && onprogress(p * 0.9);
+    // });
 
-    this.videoSource = await VideoSource.get(this.src, this.player.id);
+    this.videoSource = await VideoSource.get(this.src, this.player);
     this.info = await this.videoSource.loadmeta();
     this.ticker = 1 / this.info.fps;
     console.log('meta', this.node.id, this.info);
@@ -83,7 +83,7 @@ class VideoMaterial extends ImageMaterial {
   }
 
   closeFrame(frame, note) {
-    frame.image.close();
+    frame.data.close();
     frame.note = note;
   }
 
@@ -94,7 +94,7 @@ class VideoMaterial extends ImageMaterial {
     const ss = performance.now();
     // console.log('extract start', matTime);
     const duration = CACHE_FRAMES / this.player.fps;
-    const frames = await this.videoSource.extract(matTime, matTime + duration);
+    const frames = await this.videoSource.extract('video', matTime, matTime + duration);
     if (!frames) return;
     let append = false;
     for (let i in this.frames) {
@@ -131,7 +131,7 @@ class VideoMaterial extends ImageMaterial {
       if (blur > 0) ctx.filter = `blur(${blur}px)`;
       const ss = performance.now();
       ctx.clearRect(0, 0, width, height);
-      ctx.drawImage(frame.image, 0, 0, width, height);
+      ctx.drawImage(frame.data, 0, 0, width, height);
       view.source = this.canvas;
     } catch (e) {
       console.error(e);
@@ -140,6 +140,56 @@ class VideoMaterial extends ImageMaterial {
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
     // console.log('!!frame', time.toFixed(3), { lag, pool });
+  }
+
+  async getAudioFrame(nodeTime, frameSize) {
+    if (this.audioBuffer) return super.getAudioFrame(nodeTime, frameSize);
+    if (!this.info || this.info.numberOfChannels <= 0) return null;
+    // todo: 没有处理变速的问题！！
+    const { time, loops, overflow } = this.matTime(nodeTime);
+    const { audioSampleRate, numberOfChannels, audioContext } = this.player;
+    const start = this.audioCache && this.audioCache.start ?
+       Math.round((time - this.audioCache.start) * audioSampleRate) : -1;
+
+    if (start < 0 || start + frameSize > this.audioCache.length) {
+      // const ss = performance.now();
+      const res = await this.videoSource.extract('audio', time, time + 1);
+
+      let data = [], start, duration, matSampleRate;
+      for (const ch of res) {
+        start = ch.t;
+        matSampleRate = ch.sampleRate;
+        const chData = new Float32Array(ch.data);
+        duration = chData.length / matSampleRate;
+        data.push(chData);
+      }
+
+      if (audioSampleRate !== matSampleRate) { // resample to audioSampleRate
+        const ctx = new OfflineAudioContext(numberOfChannels, audioSampleRate * duration, audioSampleRate);
+        const source = ctx.createBufferSource();
+        const buffer = audioContext.createBuffer(numberOfChannels, data[0].length, matSampleRate);
+        for (let c = 0; c < numberOfChannels; c++) {
+          buffer.getChannelData(c).set(data[c]);
+        }
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start();
+        const resampledBuffer = await ctx.startRendering();
+        data = [];
+        for (let c = 0; c < numberOfChannels; c++) {
+          data.push(resampledBuffer.getChannelData(c));
+        }
+      }
+
+      this.audioCache = { start, length: data[0].length, data };
+      // console.log(`audio cache ${matSampleRate}=>${audioSampleRate}`, nodeTime, this.audioCache.length, performance.now() - ss);
+    }
+
+    const buffer = audioContext.createBuffer(numberOfChannels, frameSize, audioSampleRate);
+    for (let c = 0; c < numberOfChannels; c++) {
+      buffer.getChannelData(c).set(this.audioCache.data[c].slice(start, start + frameSize));
+    }
+    return buffer;
   }
 
   destroy() {

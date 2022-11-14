@@ -27,16 +27,22 @@ class MP4FileSink {
 }
 
 class MP4Decoder {
-  constructor(url) {
+  constructor({ url, numberOfChannels }) {
     this.id = Math.random().toString(36).substr(-8) + Math.random().toString(36).substr(-8);
     this.url = url;
     this.ready = false;
     this._extractcallbacks = [];
     this.kfs = [];
     this._frameTimer = {};
+    this.audioOutput = { numberOfChannels };
 
     this.videoDecoder = new VideoDecoder({
-      output: (frame) => this.output(frame),
+      output: (frame) => this.voutput(frame),
+      error: (error) => { },
+    });
+
+    this.audioDecoder = new AudioDecoder({
+      output: (frame) => this.aoutput(frame),
       error: (error) => { },
     });
 
@@ -65,9 +71,9 @@ class MP4Decoder {
     });
   }
 
-  async extract({ start, end }) {
+  async extract({ type, start, end, reqId }) {
     return new Promise((resolve, reject) => {
-      this._extractcallbacks.push({ start, end, resolve, reject });
+      this._extractcallbacks.push({ type, start, end, reqId, resolve, reject });
       this.extractNext();
     });
   }
@@ -75,10 +81,11 @@ class MP4Decoder {
   extractNext() {
     if (this.extracting) return false;
     const item = this._extractcallbacks.shift();
+    // console.log('extractNext', item);
     if (!item) {
       this.extracting = false;
       this.extractingRequest = null;
-      this.videoFrames = [];
+      this.frames = [];
       return;
     }
     try {
@@ -87,15 +94,23 @@ class MP4Decoder {
       this._extractStart = performance.now();
       this.extracting = true;
       this.extractingRequest = item;
-      this.videoFrames = [];
+      this.frames = [];
+      // console.log('extract start', item.type, item.reqId);
       let start = item.start;
-      // todo: 其实没必要...
-      for (const kf of this.kfs) {
-        if (kf > item.start) break;
-        start = kf;
+      // 每次开始前，必须要unset，否则会带着上次的
+      this.file.unsetExtractionOptions(this.vtrackId);
+      this.file.unsetExtractionOptions(this.atrackId);
+      if (item.type === 'video') {
+        // todo: 其实没必要...
+        for (const kf of this.kfs) {
+          if (kf > item.start) break;
+          start = kf;
+        }
+        // console.log('extractNext start', start, this.kfs);
+        this.file.setExtractionOptions(this.vtrackId, 'video', { nbSamples: 100 });
+      } else {
+        this.file.setExtractionOptions(this.atrackId, 'audio', { nbSamples: 100 });
       }
-      // console.log('extractNext start', start, this.kfs);
-      this.file.setExtractionOptions(this.vtrackId, 'video', { nbSamples: 100 });
       this.file.seek(start, true);
       this.file.start();
     } catch (err) {
@@ -106,17 +121,63 @@ class MP4Decoder {
     }
   }
 
-  async output(frame) {
-    // console.log('output', frame.timestamp, this.extractingRequest);
-    // if (!this.extractingRequest) return frame.close();
-
-    const { start, end, resolve, reject } = this.extractingRequest;
-    let { width, height } = this.meta;
+  async aoutput(frame) {
+    if (!this.extractingRequest) return frame.close();
+    const { start, end, reqId, resolve, reject } = this.extractingRequest;
 
     const t = frame.timestamp / 1e6;
+    const d = frame.duration  / 1e6;
+    const format = `${frame.format}`;
+    const isPlanar = format.endsWith('planar');
+    const { numberOfChannels } = this.audioOutput;
+    if (t + d >= start && t <= end) {
+      const data = [];
+      if (isPlanar) {
+        for (let c = 0; c < Math.min(numberOfChannels, frame.numberOfChannels); c++) {
+          const opt = { planeIndex: c };
+          const ab = new ArrayBuffer(frame.allocationSize(opt));
+          frame.copyTo(ab, opt);
+          data.push(ab);
+        }
+      } else {
+        // todo: 待调试
+        const opt = { planeIndex: 0 };
+        const ab = new ArrayBuffer(frame.allocationSize(opt));
+        frame.copyTo(ab, opt);
+        const bitLen = format.includes('32') ? 32 : (format.includes('16') ? 16 : 8);
+        const mixData = bitLen == 32 ? new Uint32Array(ab) : (bitLen == 16 ? new Uint16Array(ab) : new Uint8Array(ab)); 
+        for (let c = 0; c < Math.min(numberOfChannels, frame.numberOfChannels); c++) {
+          const chData = bitLen == 32 ? new Uint32Array(frame.numberOfFrames) : (bitLen == 16 ? new Uint16Array(frame.numberOfFrames) : new Uint8Array(frame.numberOfFrames)); 
+          for (let i = 0; i < chData.length; i++) {
+            chData[i] = mixData[(i * frame.numberOfChannels) + c];
+          }
+          data.push(chData.buffer);
+        }
+      }
+      this.frames.push({ data, t, d, format, size: frame.numberOfFrames });
+    }
+    frame.close();
+    this.currentTime = t;
+
+    // stop
+    if (t >= Math.min(end, this.meta.lastFrame)) {
+      this.file.stop();
+      this.file.flush();
+      this.extractFinish();
+    }
+  }
+
+  async voutput(frame) {
+    // console.log('voutput', frame.timestamp, this.extractingRequest);
+    if (!this.extractingRequest) return frame.close();
+
+    const { start, end, reqId, resolve, reject } = this.extractingRequest;
+
+    const t = frame.timestamp / 1e6;
+    const d = frame.duration  / 1e6;
     // console.log('frame', t, frame.format, frame.colorSpace.matrix);
-    if (t >= start && t <= end) {
-      this.videoFrames.push({ image: this.getImage(frame), t });
+    if (t + d >= start && t <= end) {
+      this.frames.push({ data: this.getImage(frame), t, d });
     }
     frame.close();
     this.currentTime = t;
@@ -133,21 +194,75 @@ class MP4Decoder {
 
   extractFinish() {
     if (!this.extractingRequest) return;
-    const { resolve } = this.extractingRequest;
+    const { type, reqId, resolve } = this.extractingRequest;
     // console.log('reset!');
-    this.videoDecoder.reset(); // empty decode queue
-    this.videoDecoder.configure(this.vconfig);
+
+    if (type === 'video') {
+      this.videoDecoder.reset(); // empty decode queue
+      this.videoDecoder.configure(this.vconfig);
+      resolve(this.frames);
+    } else {
+      this.audioDecoder.reset(); // empty decode queue
+      this.audioDecoder.configure(this.aconfig);
+
+      const { numberOfChannels } = this.audioOutput;
+      const totalByteLength = this.frames.reduce((a, b) => a + b.data[0].byteLength, 0);
+      const totalSamples = this.frames.reduce((a, b) => a + b.size, 0);
+
+      let data = [];
+      for (let c = 0; c < numberOfChannels; c++) {
+        let concatBuffer = new Uint8Array(totalByteLength);
+        let offset = 0;
+        let rc = Math.min(c, this.meta.numberOfChannels - 1);
+        for (const frame of this.frames) {
+          concatBuffer.set(new Uint8Array(frame.data[rc]), offset);
+          offset += frame.data[rc].byteLength;
+        }
+        let format = this.frames[0].format.replace('-planar', '');
+        let _data, fdata;
+        switch (format) {
+          case 'u8':
+            _data = new Uint8Array(concatBuffer.buffer);
+            fdata = new Float32Array(_data.length);
+            _data.map((v, k) => fdata[k] = (v - 128) / 128);
+            break;
+          case 's16':
+            _data = new Uint16Array(concatBuffer.buffer);
+            fdata = new Float32Array(_data.length);
+            _data.map((v, k) => fdata[k] = v / 32768);
+            break;
+          case 's32':
+            _data = new Uint32Array(concatBuffer.buffer);
+            fdata = new Float32Array(_data.length);
+            _data.map((v, k) => fdata[k] = v / 2147483648);
+            break;
+          default:
+            fdata = new Float32Array(concatBuffer.buffer);
+            break;
+        }
+        data.push(fdata);
+      }
+
+      resolve(data.map(d => {
+        return { 
+          data: d.buffer, 
+          t: this.frames[0].t, 
+          sampleRate: this.meta.sampleRate
+        };
+      }));
+    }
+
+    console.log('worker extract cost:', type, performance.now() - this._extractStart);
+    // console.log('extract end', type, reqId);
     this.extracting = false;
-    console.log('worker extract cost:', performance.now() - this._extractStart);
-    resolve(this.videoFrames);
     this.extractNext();
   }
 
   onSamples(track_id, type, samples) {
     const last = samples[samples.length - 1];
     const lastTime = last.cts / last.timescale;
-    // console.log('sample', last.cts / last.timescale, this.meta.duration);
-    if (!this.extractingRequest) {
+    // console.log('sample', type, samples.length, last.cts / last.timescale);
+    if (type === 'probe') {
       if (track_id === this.vtrackId) {
         for (const sample of samples) {
           if (sample.is_sync) this.kfs.push(sample.cts / sample.timescale);
@@ -163,40 +278,36 @@ class MP4Decoder {
       return;
     }
 
-    // console.log('sss', this.id, this.extractingRequest, samples.length);
-
-    // Generate and emit an EncodedVideoChunk for each demuxed sample.
+    const decoder = type === 'video' ? this.videoDecoder : this.audioDecoder;
+    const chunkClass = type === 'video' ? EncodedVideoChunk : EncodedAudioChunk;
     for (const sample of samples) {
       const t = sample.cts / sample.timescale;
-      // video
-      if (track_id === this.vtrackId) {
-        // console.log('decode.in', t, sample.is_sync);
-        this.videoDecoder.decode(new EncodedVideoChunk({
-          type: sample.is_sync ? "key" : "delta",
-          timestamp: 1e6 * sample.cts / sample.timescale,
-          duration: 1e6 * sample.duration / sample.timescale,
-          data: sample.data
-        }))
-
-      // audio
-      } else if (track_id === this.atrackId) {
-        ;
-      }
+      decoder.decode(new chunkClass({
+        type: sample.is_sync ? "key" : "delta",
+        timestamp: 1e6 * sample.cts / sample.timescale,
+        duration: 1e6 * sample.duration / sample.timescale,
+        data: sample.data
+      }));
     }
 
     // 必须要调用，否则会有一些在queue里的出不来
     this.file.stop();
-    this.videoDecoder.flush().catch(e => {}).finally(() => {
-      this.extractFinish();
+    decoder.flush().catch(e => {
+      // console.log(e, reqId);
+    }).finally(() => {
+      // video在flush之后，必须接着关键帧，所以只能结束了
+      if (type === 'video') return this.extractFinish();
+      else if (this.extracting) this.file.start();
     });
+
     // console.log('flush!!');
   }
 
   onReady(info) {
     // video decoder config
-    const vtrack = info.videoTracks[0];
     // console.log('ready!', info);
 
+    const vtrack = info.videoTracks[0];
     this.vconfig = {
       codec: vtrack.codec,
       codedHeight: vtrack.video.height,
@@ -206,12 +317,27 @@ class MP4Decoder {
     this.videoDecoder.configure(this.vconfig);
     this.vtrackId = vtrack.id;
 
-    // todo: audio decoder config
+    const atrack = info.audioTracks[0];
+    if (atrack) {
+      this.aconfig = {
+        codec: atrack.codec,
+        sampleRate: atrack.audio.sample_rate,
+        numberOfChannels: atrack.audio.channel_count,
+        sampleSize: atrack.audio.sample_size,
+      }
+      this.audioDecoder.configure(this.aconfig);
+      this.atrackId = atrack.id;  
+    } else {
+      this.atrackId = undefined;
+      this.aconfig = { sampleRate: 0, numberOfChannels: 0, sampleSize: 0 };
+    }
+
     const { width, height } = vtrack.video;
+    const { sampleRate, numberOfChannels, sampleSize } = this.aconfig;
     const frames = vtrack.nb_samples;
     const duration = vtrack.duration / vtrack.timescale;
     const fps = (frames / duration).toFixed(6);
-    this.meta = { width, height, frames, duration, fps };
+    this.meta = { width, height, frames, duration, sampleRate, numberOfChannels, sampleSize, fps };
 
     this.prepareCanvas();
     this.ready = true;
@@ -337,11 +463,12 @@ class MP4Decoder {
 let decoder = null;
 self.addEventListener('message', async (e) => {
   if (e.data.method === 'init') {
-    decoder = new MP4Decoder(e.data.url);
+    decoder = new MP4Decoder(e.data);
 
   } else if (e.data.method === 'extract') {
     const frames = await decoder.extract(e.data);
-    self.postMessage({ method: 'extract', frames }, [ ...frames.map(f => f.image) ]);
+    self.postMessage({ method: 'extract', frames, reqId: e.data.reqId }, 
+      [ ...frames.map(f => f.data) ]);
 
   } else if (e.data.method === '') {
     ;

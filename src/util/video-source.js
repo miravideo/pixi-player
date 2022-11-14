@@ -10,17 +10,18 @@ if (global) global.PIXIPLY_VSPOOL = VPOOL;
 let WORKER_CODE = 'let MP4Box = {}, _;';
 const mpi = require.resolve('mp4box');
 WORKER_CODE += '(' + __webpack_modules__[mpi].toString() + ')(_, MP4Box);';
-const vdi = require.resolve('./video-worker.js');
+const vdi = require.resolve('./video-decoder.js');
 WORKER_CODE += '(' + __webpack_modules__[vdi].toString() + ')()';
 const WORKER_URL = URL.createObjectURL(new Blob([WORKER_CODE]));
 
 class VideoSource  {
-  constructor(url) {
+  constructor(url, player) {
     this.id = Utils.genUuid();
     this.url = url;
     this.meta = null;
     this._metacallbacks = [];
     this.queue = new Queue();
+    const { audioSampleRate, numberOfChannels } = player;
 
     this.worker = new Worker(WORKER_URL); //'./dist/video-decoder.js'
     this.worker.addEventListener('message', e => {
@@ -30,7 +31,7 @@ class VideoSource  {
         this._metacallbacks = [];
       }
     }, { once: true });
-    this.worker.postMessage({ method: 'init', url });
+    this.worker.postMessage({ method: 'init', url, audioSampleRate, numberOfChannels });
   }
 
   async loadmeta() {
@@ -41,13 +42,15 @@ class VideoSource  {
     });
   }
 
-  async extract(start, end) {
+  async extract(type, start, end) {
     return this.queue.enqueue(async () => {
       return new Promise((resolve, reject) => {
+        const reqId = Utils.genUuid();
         this.worker.addEventListener('message', e => {
+          // console.error('rrrr', reqId == e.data.reqId);
           if (e.data.method === 'extract') resolve(e.data.frames);
         }, { once: true });
-        this.worker.postMessage({ method: 'extract', start, end });
+        this.worker.postMessage({ method: 'extract', start, end, type, reqId });
       });
     });
   }
@@ -68,12 +71,13 @@ class VideoSource  {
     VPOOL[cid] = null;
   }
 
-  static get(url, cid) {
+  static get(url, player) {
     return VQ.enqueue(async () => { // 用Queue避免并发导致重复
+      const cid = player.id;
       if (!VPOOL[cid]) VPOOL[cid] = {};
       const key = md5(url);
       if (!VPOOL[cid][key]) {
-        VPOOL[cid][key] = new VideoSource(url);
+        VPOOL[cid][key] = new VideoSource(url, player);
       }
       return VPOOL[cid][key];
     });

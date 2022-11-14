@@ -615,7 +615,7 @@ class Clip extends EventEmitter {
     const volume = this.volume(absTime);
     if (volume <= 0) return {};
     const nodeTime = absTime - this.absStartTime;
-    const audioFrame = this.material.getAudioFrame(nodeTime, frameSize);
+    const audioFrame = await this.material.getAudioFrame(nodeTime, frameSize);
     return { volume, audioFrame };
   }
 

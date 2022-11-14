@@ -14,10 +14,11 @@ class Player extends EventEmitter {
   constructor(opts={}) {
     super();
     this.id = Utils.genUuid();
-    const { fps=24, playbackRate=1.0, audioSampleRate=44100, volume=1.0 } = opts;
+    const { fps=24, playbackRate=1.0, audioSampleRate=44100, numberOfChannels=2, volume=1.0 } = opts;
     this.fps = fps;
     this.playbackRate = playbackRate;
     this.audioSampleRate = audioSampleRate;
+    this.numberOfChannels = numberOfChannels;
     this.volume = volume;
     this._timer = 0;
   }
@@ -96,30 +97,10 @@ class Player extends EventEmitter {
     this.app.stage.addChild(rootView);
 
     // timer update
-    let aa = 0; // for PID accumulate
     this.tickerCallback = async (delta) => {
       if (this.queue.length > 0) return; // 跳一帧
       this.queue.enqueue(async () => {
-        const dt = 1000 / this.fps;
-        const delays = this.videoDelays();
-        const maxDelay = delays.length > 0 ? Math.max(...delays) : 0;
-        let adjust = maxDelay * 1000; // unit to ms
-        if (adjust !== 0) {
-          aa += adjust;
-          adjust = ((adjust * 0.2) + (aa * 0.01)) >> 0; // P=0.2, I=0.01, D=0.0
-        }
-
-        adjust = 0;
-        const ticker = Math.max(0, dt - adjust);
-        if (ticker <= 0) {
-          if (Math.abs(adjust / dt) > 2) {
-            // todo: to much delay, show loading..
-            console.log('to much delay');
-            return;
-          }
-          // console.log('stop!!', {dt, maxDelay, adjust});
-        }
-
+        const ticker = 1000 / this.fps;
         this._timer += ticker * this.playbackRate * 0.001;
         const { currentTime, duration } = this;
         if (currentTime < duration) {
@@ -160,15 +141,6 @@ class Player extends EventEmitter {
     this.emit('loadedmetadata', {
       duration: this.duration, width: this.width, height: this.height
     });
-  }
-
-  videoDelays() {
-    const delays = [];
-    for (const node of this.rootNode.allNodes) {
-      if (node.type !== 'video' || !node.material.playing) continue;
-      delays.push(node.material.playerDelay);
-    }
-    return delays;
   }
 
   async resize(width, height) {
@@ -295,25 +267,30 @@ class Player extends EventEmitter {
 
   async getFrameAudioData(time, opts={}) {
     let { size } = opts;
-    let { audioSampleRate, fps } = this;
+    let { audioSampleRate, numberOfChannels, fps } = this;
     size = size || Math.round(audioSampleRate / fps);
-    const buffer = this.audioContext.createBuffer(2, size, audioSampleRate);
-    const mergedAudioFrame = [buffer.getChannelData(0), buffer.getChannelData(1)];
+    const buffer = this.audioContext.createBuffer(numberOfChannels, size, audioSampleRate);
+    const mergedAudioFrame = [];
+    for (let c = 0; c < numberOfChannels; c++) {
+      mergedAudioFrame.push(buffer.getChannelData(c));
+    }
+
     for (const node of this.rootNode.allNodes) {
       const { volume, audioFrame } = await node.getAudioFrame(time, size);
       if (!volume || !audioFrame || !audioFrame.length) continue;
-      const ch0 = audioFrame.getChannelData(0);
-      const ch1 = audioFrame.getChannelData(1);
-      for (let i = 0; i < size; i++) {
-        mergedAudioFrame[0][i] += ch0[i] * volume || 0;
-        mergedAudioFrame[1][i] += ch1[i] * volume || 0;
+      for (let c = 0; c < numberOfChannels; c++) {
+        const chData = audioFrame.getChannelData(c);
+        for (let i = 0; i < size; i++) {
+          mergedAudioFrame[c][i] += chData[i] * volume || 0;
+        }
       }
     }
 
     if (Math.abs(this.volume - 1.0) > 0.01) {
       for (let i = 0; i < size; i++) {
-        mergedAudioFrame[0][i] = mergedAudioFrame[0][i] * this.volume;
-        mergedAudioFrame[1][i] = mergedAudioFrame[1][i] * this.volume;
+        for (let c = 0; c < numberOfChannels; c++) {
+          mergedAudioFrame[c][i] = mergedAudioFrame[c][i] * this.volume;
+        }
       }
     }
 
@@ -354,7 +331,8 @@ class Player extends EventEmitter {
   async playAudio(start) {
     if (this.volume <= 0) return this.stopAudio();
     const frames = 10;
-    const len = frames / this.fps;
+    const { numberOfChannels, fps } = this;
+    const len = frames / fps;
     if (this.playingAudioSource && this.playingAudioEnd - start > len) return;
     const ss = performance.now();
     if (!this.playingAudioSource) {
@@ -366,12 +344,14 @@ class Player extends EventEmitter {
       source.start();
       this.playingAudioSource = source;
       this.playingAudioEnd = start + (len * 2);
+      this.updateLastHalf = false;
     } else {
       const buffer = this.playingAudioSource.buffer;
       const offset = this.updateLastHalf ? buffer.length * 0.5 : 0;
       const ab = await this.getAudioBuffer(this.playingAudioEnd, frames);
-      buffer.getChannelData(0).set(ab.getChannelData(0), offset);
-      buffer.getChannelData(1).set(ab.getChannelData(1), offset);
+      for (let c = 0; c < numberOfChannels; c++) {
+        buffer.getChannelData(c).set(ab.getChannelData(c), offset);
+      }
       this.updateLastHalf = !this.updateLastHalf;
       this.playingAudioEnd += len;
     }
@@ -388,17 +368,18 @@ class Player extends EventEmitter {
   }
 
   async getAudioBuffer(time, frames) {
-    const { audioSampleRate, fps } = this;
+    const { audioSampleRate, numberOfChannels, fps } = this;
     const tick = 1 / fps;
     const len = Math.round(frames * tick * audioSampleRate);
-    const buffer = this.audioContext.createBuffer(2, len, audioSampleRate);
+    const buffer = this.audioContext.createBuffer(numberOfChannels, len, audioSampleRate);
     let cursor = 0, timer = time;
     for (let i = 0; i < frames; i++) {
       const size = Math.min(len, Math.round((i + 1) * tick * audioSampleRate)) - cursor;
       const aframe = await this.getFrameAudioData(timer, { size });
       timer += tick;
-      buffer.getChannelData(0).set(aframe.getChannelData(0), cursor);
-      buffer.getChannelData(1).set(aframe.getChannelData(1), cursor);
+      for (let c = 0; c < numberOfChannels; c++) {
+        buffer.getChannelData(c).set(aframe.getChannelData(c), cursor);
+      }
       cursor += aframe.length;
     }
     return buffer;

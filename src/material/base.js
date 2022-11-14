@@ -117,7 +117,7 @@ class Material {
     // todo: 没有处理变速的问题！！
     const buffer = this.player.audioContext.createBuffer(2, frameSize, audioSampleRate);
     buffer.getChannelData(0).set(this.ach0.slice(start, start + frameSize));
-    buffer.getChannelData(1).set(this.ach0.slice(start, start + frameSize));
+    buffer.getChannelData(1).set(this.ach1.slice(start, start + frameSize));
     return buffer;
   }
 
