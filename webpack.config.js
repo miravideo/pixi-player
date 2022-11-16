@@ -47,7 +47,11 @@ module.exports = {
       {
         test: /\.(frag|vert|glsl)$/,
         use: 'raw-loader'
-      }
+      },
+      // {
+      //   test: /\.wasm$/,
+      //   type: "asset/inline"
+      // }
     ],
   },
   resolve: {

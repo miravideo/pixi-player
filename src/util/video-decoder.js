@@ -1,4 +1,8 @@
 
+const randId = () => {
+  return Math.random().toString(36).substr(-8) + Math.random().toString(36).substr(-8);
+}
+
 class MP4FileSink {
   constructor(file, setStatus) {
     this.offset = 0;
@@ -28,7 +32,7 @@ class MP4FileSink {
 
 class MP4Decoder {
   constructor({ url, numberOfChannels }) {
-    this.id = Math.random().toString(36).substr(-8) + Math.random().toString(36).substr(-8);
+    this.id = randId();
     this.url = url;
     this.ready = false;
     this._extractcallbacks = [];
@@ -287,10 +291,12 @@ class MP4Decoder {
     const chunkClass = type === 'video' ? EncodedVideoChunk : EncodedAudioChunk;
     for (const sample of samples) {
       const t = sample.cts / sample.timescale;
+      const d = sample.duration / sample.timescale;
+      // if (type === 'audio') console.log('sample', { t, d, len: sample.size});
       decoder.decode(new chunkClass({
         type: sample.is_sync ? "key" : "delta",
-        timestamp: 1e6 * sample.cts / sample.timescale,
-        duration: 1e6 * sample.duration / sample.timescale,
+        timestamp: 1e6 * t,
+        duration: 1e6 * d,
         data: sample.data
       }));
     }

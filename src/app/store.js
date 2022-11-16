@@ -66,23 +66,12 @@ class Store extends EventEmitter {
     }
     runInAction(() => {
       this.loading = true;
-      this.loadingProgress = 0.01;
+      this.loadingProgress = 0.001;
     });
-    let burningR = 1;
-    let initR = 0;
-    if (!this.burner.ready) {
-      initR = 0.05;
-      await this.burner.init((p) => {
-        runInAction(() => {
-          this.loadingProgress = Math.max(p * initR, 0.01);
-        });
-      });
-      burningR = 1 - initR;
-    }
 
-    const url = await this.burner.start(this.player, (p) => {
+    const url = await this.burner.export(this.player, (p) => {
       runInAction(() => {
-        this.loadingProgress = Math.max(initR + (p * burningR), 0.01);
+        this.loadingProgress = Math.max(p, 0.001);
       });
     });
 
