@@ -68,7 +68,7 @@ class Material {
     }
 
     const mt = time * this.speed + this.getStartOffset();
-    const min = this.forceTrim ? this.getStartOffset() : 0.01; // 0会导致黑屏
+    const min = this.forceTrim ? this.getStartOffset() : 0;
     const max = this.forceTrim ? this.getEndOffset() : this.length;
     const overflow = (mt < min || mt > max);
     time = Math.min(max, Math.max(min, mt));

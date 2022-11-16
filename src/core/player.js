@@ -93,7 +93,7 @@ class Player extends EventEmitter {
     this.rootNode.annotate(); //again
 
     // add view
-    const rootView = this.rootNode.getView(0.001, STATIC.VIEW_TYPE_SEEK);
+    const rootView = this.rootNode.getView(0, STATIC.VIEW_TYPE_SEEK);
     this.app.stage.addChild(rootView);
 
     // timer update

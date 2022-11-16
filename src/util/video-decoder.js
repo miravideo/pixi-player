@@ -200,7 +200,6 @@ class MP4Decoder {
     if (type === 'video') {
       this.videoDecoder.reset(); // empty decode queue
       this.videoDecoder.configure(this.vconfig);
-      resolve(this.frames);
     } else {
       this.audioDecoder.reset(); // empty decode queue
       this.audioDecoder.configure(this.aconfig);
@@ -243,16 +242,22 @@ class MP4Decoder {
         data.push(fdata);
       }
 
-      resolve(data.map(d => {
+      this.frames = data.map(d => {
         return { 
           data: d.buffer, 
           t: this.frames[0].t, 
           sampleRate: this.meta.sampleRate
         };
-      }));
+      });
     }
 
-    console.log('worker extract cost:', type, performance.now() - this._extractStart);
+    resolve(this.frames);
+    // console.log('worker extract cost:', { type, 
+    //   from: this.frames[0].t.toFixed(3), 
+    //   to: this.frames[this.frames.length - 1].t.toFixed(3), 
+    //   len: this.frames.length, 
+    //   cost_ms: Math.round(performance.now() - this._extractStart)
+    // });
     // console.log('extract end', type, reqId);
     this.extracting = false;
     this.extractNext();
@@ -271,7 +276,7 @@ class MP4Decoder {
         if (lastTime >= this.meta.duration - 0.1) {
           this.meta.keyframes = this.kfs.length;
           this.meta.lastFrame = lastTime;
-          // console.log('probe done!!', this.kfs.length, performance.now() - this._probeStart);
+          // console.log('probe done!!', this.kfs, performance.now() - this._probeStart);
           self.postMessage({ method: 'ready', meta: this.meta });
         }
       }
@@ -290,17 +295,26 @@ class MP4Decoder {
       }));
     }
 
-    // 必须要调用，否则会有一些在queue里的出不来
-    this.file.stop();
-    decoder.flush().catch(e => {
-      // console.log(e, reqId);
-    }).finally(() => {
-      // video在flush之后，必须接着关键帧，所以只能结束了
-      if (type === 'video') return this.extractFinish();
-      else if (this.extracting) this.file.start();
-    });
+    // if (type === 'video') console.log('samples', { 
+    //   len: samples.length, 
+    //   from: samples[0].cts / samples[0].timescale,
+    //   to: lastTime,
+    //   kfs: JSON.stringify(samples.filter(s => s.is_sync).map(sample => sample.cts / sample.timescale))
+    // });
 
-    // console.log('flush!!');
+    const { end } = this.extractingRequest;
+    // end + 0.5s 是为了避免后面的B帧先满足了时间，flush之后没有I帧，出不来
+    if (lastTime >= Math.min(end + 0.5, this.meta.lastFrame)) {
+      this.file.stop();
+      // 调用flush，避免一些帧在queue里出不来
+      decoder.flush().catch(e => {
+        // console.log(e, reqId);
+      }).finally(() => {
+        // video在flush之后，必须接着关键帧，所以只能结束了
+        if (type === 'video') return this.extractFinish();
+        else if (this.extracting) this.file.start();
+      });
+    }
   }
 
   onReady(info) {

@@ -352,14 +352,14 @@ const Controls = observer(({store}) => {
       <Buttons>
         <Button className={store.playing ? 'pause-button' : 'play-button'} 
           onClick={(e) => store.togglePlay()}></Button>
-        { !store.canvasStyle || store.canvasStyle.width < 200 ? null :
+        { !store.canvasStyle || store.canvasStyle.ctrWidth < 200 ? null :
           <Time>{Utils.formatTime(store.currentTime)} / {Utils.formatTime(store.duration)}</Time>
         }
         <Space></Space>
-        { !store.canvasStyle.width || store.canvasStyle.width < 250 ? null :
+        { !store.canvasStyle.ctrWidth || store.canvasStyle.ctrWidth < 250 ? null :
           <Button className={store.muted ? 'sound-off-button' : 'sound-on-button'} onClick={() => store.toggleMute()}></Button>
         }
-        { !store.canvasStyle.width || store.canvasStyle.width < 300 ? null :
+        { !store.canvasStyle.ctrWidth || store.canvasStyle.ctrWidth < 300 ? null :
           <Button className="export-button" onClick={() => store.export()}></Button>
         }
         { store.hideMenuButton ? null : 

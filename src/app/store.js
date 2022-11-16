@@ -36,8 +36,8 @@ class Store extends EventEmitter {
     this.toastHide = true;
 
     // player
-    this.player = new Player();
-    this.burner = new Burner();
+    this.player = new Player(opt);
+    this.burner = new Burner(opt);
     makeObservable(this, {
       loading: observable,
       loaded: observable,
@@ -189,6 +189,7 @@ class Store extends EventEmitter {
     const marginTop = (this.opt.height - height) / 2;
     runInAction(() => {
       this.canvasStyle = {
+        ctrWidth: this.opt.width, ctrHeight: this.opt.height,
         width, height, marginLeft, marginTop
       };
     });
@@ -356,13 +357,13 @@ class Store extends EventEmitter {
       }});
     }
 
-    if (this.canvasStyle.width) {
-      if (this.canvasStyle.width < 250) {
+    if (this.canvasStyle.ctrWidth) {
+      if (this.canvasStyle.ctrWidth < 250) {
         items.push({ title: 'Sound', desc: this.muted ? 'Off' : 'On', action: () => {
           this.toggleMute();
         }});
       }
-      if (this.canvasStyle.width < 300) {
+      if (this.canvasStyle.ctrWidth < 300) {
         items.push({ title: 'Export Video', action: () => {
           this.export();
         }});

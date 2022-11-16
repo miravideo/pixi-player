@@ -51,15 +51,17 @@ class VideoMaterial extends ImageMaterial {
   async getFrame(matTime, retried=0) {
     matTime = Math.max(0, Math.min(matTime, this.info.lastFrame));
     let i = 0;
+    // 半帧以内，就四舍五入了
+    const mtime = matTime - (this.ticker / 2);
     for (; i < this.frames.length; i++) {
       const frame = this.frames[i];
-      if (frame.t < matTime) this.closeFrame(frame, 'rollover');
+      if (frame.t < mtime) this.closeFrame(frame, 'rollover');
       else break;
     }
 
     const frame = this.frames[i];
     // 可以接受1-2帧的误差，因为有些视频会缺帧
-    if (frame && frame.t - matTime < this.ticker * 3) {
+    if (frame && Math.abs(frame.t - matTime) < this.ticker * 3) {
       this.frames.splice(0, i);
       if (this.frames.length < CACHE_FRAMES) {
         const lastTime = this.frames[this.frames.length - 1].t;
@@ -139,7 +141,7 @@ class VideoMaterial extends ImageMaterial {
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
-    // console.log('!!frame', time.toFixed(3), { lag, pool });
+    // console.log('!!frame', nodeTime.toFixed(3), time.toFixed(3), { lag, pool });
   }
 
   async getAudioFrame(nodeTime, frameSize) {
