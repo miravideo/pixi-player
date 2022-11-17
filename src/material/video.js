@@ -150,10 +150,12 @@ class VideoMaterial extends ImageMaterial {
     // todo: 没有处理变速的问题！！
     const { time, loops, overflow } = this.matTime(nodeTime);
     const { audioSampleRate, numberOfChannels, audioContext } = this.player;
-    const start = this.audioCache && this.audioCache.start ?
+
+    // 当前时间相对于缓存相对时间的index, 音频decode之后开始时间会前移一点点
+    let startIndex = this.audioCache && this.audioCache.start ?
        Math.round((time - this.audioCache.start) * audioSampleRate) : -1;
 
-    if (start < 0 || start + frameSize > this.audioCache.length) {
+    if (startIndex < 0 || startIndex + frameSize > this.audioCache.length) {
       // const ss = performance.now();
       const res = await this.videoSource.extract('audio', time, time + 1);
 
@@ -184,12 +186,14 @@ class VideoMaterial extends ImageMaterial {
       }
 
       this.audioCache = { start, length: data[0].length, data };
+      // 更新startIndex 音频decode会有时间偏差，需要重新计算index
+      startIndex = Math.round((time - start) * audioSampleRate);
       // console.log(`audio cache ${matSampleRate}=>${audioSampleRate}`, nodeTime, this.audioCache.length, performance.now() - ss);
     }
 
     const buffer = audioContext.createBuffer(numberOfChannels, frameSize, audioSampleRate);
     for (let c = 0; c < numberOfChannels; c++) {
-      buffer.getChannelData(c).set(this.audioCache.data[c].slice(start, start + frameSize));
+      buffer.getChannelData(c).set(this.audioCache.data[c].slice(startIndex, startIndex + frameSize));
     }
     return buffer;
   }

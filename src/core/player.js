@@ -333,7 +333,8 @@ class Player extends EventEmitter {
     const frames = 10;
     const { numberOfChannels, fps } = this;
     const len = frames / fps;
-    if (this.playingAudioSource && this.playingAudioEnd - start > len) return;
+    // len - 0.1，留0.1s的安全距离，避免还在播放的部分被替换
+    if (this.playingAudioSource && this.playingAudioEnd - start > len - 0.1) return;
     const ss = performance.now();
     if (!this.playingAudioSource) {
       const ab = await this.getAudioBuffer(start, frames * 2);

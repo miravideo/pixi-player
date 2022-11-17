@@ -32,6 +32,9 @@ DisplayObject.mixin({
       if (this._blur) this._blur.enabled = false;
     }
   },
+  update() {
+    this.texture.baseTexture.update();
+  },
   get source() {
     return this.texture.baseTexture.resource.source;
   },
@@ -204,7 +207,7 @@ class Clip extends EventEmitter {
     const view = this.getView(absTime, type);
     if (!view) return;
     if (this.onDraw(absTime)) {
-      // apply animation 
+      // apply animation
       const attr = this.animationAttr(absTime);
       view.animationAttrChange = JSON.stringify(attr) !== JSON.stringify(view.animationAttr);
       view.animationAttr = attr; // 给之后处理用
@@ -451,7 +454,7 @@ class Clip extends EventEmitter {
 
     let cover;
     container.covers.map(c => {
-      if (!c.onDraw(time) || c === this || 
+      if (!c.onDraw(time) || c === this ||
           (cover && c.zIndex > cover.zIndex) || c.zIndex < this.zIndex) return;
       cover = c;
     });
