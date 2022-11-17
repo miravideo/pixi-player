@@ -66,7 +66,7 @@ class Burner extends EventEmitter {
       if (this.cancelled) break;
 
       // todo: 在video/image切换的时候，设置kf，提前计算好
-      const keyFrame = i % 6 === 0;
+      const keyFrame = i % fps === 0;
       // todo: 在触发extract缓存video的时候，同时flush? 反正2个都要等待
       const flush = keyFrame;
       const timestamp = Math.round(1000000 * timer);
@@ -112,6 +112,13 @@ class Burner extends EventEmitter {
     this.worker = null;
     this.burning = false;
     return url;
+  }
+
+  annotateKeyFrames(player) {
+    const kfs = [];
+    player.rootNode.allNodes.map((node) => {
+      if (!['image', 'video'].includes(node.type)) return;
+    });
   }
 
   async workerExec(data, buffer) {

@@ -4,6 +4,7 @@ import Queue from "../util/queue";
 import Utils from "../util/utils";
 import VideoSource from "../util/video-source";
 import STATIC from "../core/static";
+import XhrUtil from "../util/xhr";
 
 const CACHE_FRAMES = 30;
 
@@ -16,15 +17,26 @@ class VideoMaterial extends ImageMaterial {
     this.perpared = false;
     this.queue = new Queue();
 
+    let src = this.src;
+    if (src.startsWith('http')) {
+      // 提前下载好, 反正之后都要全部读一编
+      const res = await XhrUtil.getRemote(src, this.player.id, (p) => {
+        const { total, loaded } = p;
+        onprogress && onprogress((loaded / total) * 0.9);
+      });
+      src = URL.createObjectURL(res.data);
+      this.cachedURL = src;
+    }
+
     // todo: use audio decoder
     // await this.loadAudioBuffer((p) => {
     //   onprogress && onprogress(p * 0.9);
     // });
 
-    this.videoSource = await VideoSource.get(this.src, this.player);
+    this.videoSource = await VideoSource.get(src, this.player);
     this.info = await this.videoSource.loadmeta();
     this.ticker = 1 / this.info.fps;
-    console.log('meta', this.node.id, this.info);
+    // console.log('meta', this.node.id, this.info);
 
     this.canvas = this.createCanvas();
     onprogress && onprogress(1.0);
@@ -210,6 +222,8 @@ class VideoMaterial extends ImageMaterial {
     this.queue = null;
     if (this.frames) this.frames.map(f => this.closeFrame(f, 'destroy'));
     this.frames = null;
+    if (this.cachedURL) URL.revokeObjectURL(this.cachedURL);
+    this.cachedURL = null;
   }
 }
 
