@@ -1,5 +1,6 @@
 
-const ONE_SECOND_IN_MICROSECOND = 1000000;
+const TIME_SCALE = 90000;
+const MICRO_SECOUND = 1e6;
 const BR_MAP = { 
   low: { v: 0.01, a: 96000 }, 
   default: { v: 0.02, a: 128000 },
@@ -14,10 +15,26 @@ class MP4Encoder {
   constructor(opts) {
     this.id = randId();
     this.opts = opts;
-    this.file = MP4Box.createFile();
+    const { fps, duration } = opts;
 
-    const tick = 1 / opts.fps;
-    this.tduration = ONE_SECOND_IN_MICROSECOND * tick;
+    this.file = MP4Box.createFile();
+    this.file.init({
+      timescale: TIME_SCALE,
+      duration: duration * TIME_SCALE,
+      brands: ['isom', 'iso2', 'avc1', 'mp41'],
+    });
+
+    // fix this issue: https://github.com/gpac/mp4box.js/pull/301
+    this.file._createSingleSampleMoof = this.file.createSingleSampleMoof.bind(this.file);
+    this.file.createSingleSampleMoof = function(sample) {
+      const moof = this._createSingleSampleMoof(sample);
+      moof.trafs[0].tfdt.set("baseMediaDecodeTime", sample.dts);
+      return moof;
+    }
+
+    const tick = 1 / fps;
+    this.tduration = MICRO_SECOUND * tick;
+    this.endTime = 0;
 
     this.initVideoEncoder();
     this.initAudioEncoder();
@@ -40,20 +57,11 @@ class MP4Encoder {
     const trackOptions = {
       name: "Video created with PIXI-Player",
       language: 'und',
-      timescale: ONE_SECOND_IN_MICROSECOND,
       width, height,
-      nb_samples: Math.floor(duration * fps),
-      media_duration: duration,
-      brands: ['isom', 'iso2', 'avc1', 'mp41'],
+      timescale: TIME_SCALE,
     };
 
-    const sampleOptions = {
-      duration: this.tduration,
-      dts: 0,
-      cts: 0,
-      is_sync: false,
-    };
-
+    // todo: encoder偶尔会出错，需要catch住错误？
     let videoTrack = null;
     const videoEncoder = new VideoEncoder({
       output: (chunk, config) => {
@@ -61,7 +69,8 @@ class MP4Encoder {
           trackOptions.avcDecoderConfigRecord = config.decoderConfig.description;
           videoTrack = this.file.addTrack(trackOptions);
         }
-        this.addSample(videoTrack, chunk, sampleOptions);
+        const sample = this.addSample(videoTrack, chunk, { duration: this.tduration });
+        this.endTime = Math.max(sample.cts + sample.duration, this.endTime);
       },
       error: (e) => console.error(e),
     });
@@ -86,26 +95,17 @@ class MP4Encoder {
       name: "Audio created with PIXI-Player",
       // name: 'SoundHandler',
       samplerate: audioSampleRate,
-      timescale: ONE_SECOND_IN_MICROSECOND,
-      duration: duration,
-      media_duration: duration,
+      timescale: TIME_SCALE,
       channel_count: numberOfChannels,
       hdlr: 'soun',
       type: 'mp4a',
-    };
-
-    const sampleOptions = {
-      duration: 0,
-      dts: 0,
-      cts: 0,
-      is_sync: false,
     };
 
     let audioTrack = null;
     const audioEncoder = new AudioEncoder({
       output: (chunk, opts) => {
         if (!audioTrack) audioTrack = this.file.addTrack(trackOptions);
-        this.addSample(audioTrack, chunk, sampleOptions);
+        this.addSample(audioTrack, chunk, {});
       },
       error: (e) => console.error(e),
     });
@@ -116,12 +116,11 @@ class MP4Encoder {
   addSample(track, chunk, opts) {
     const buffer = new ArrayBuffer(chunk.byteLength);
     chunk.copyTo(buffer);
-    opts.duration = chunk.duration || opts.duration;
-    opts.dts = chunk.timestamp;
-    opts.cts = chunk.timestamp;
+    opts.duration = Math.round(TIME_SCALE * ((chunk.duration || opts.duration) / MICRO_SECOUND));
+    opts.dts = Math.round(TIME_SCALE * (chunk.timestamp / MICRO_SECOUND));
+    opts.cts = opts.dts;
     opts.is_sync = chunk.type === 'key';
-    this.file.addSample(track, buffer, opts);
-    // console.log('addSample', track, chunk.timestamp);
+    return this.file.addSample(track, buffer, opts);
   }
 
   async encode(data) {
@@ -151,7 +150,7 @@ class MP4Encoder {
       sampleRate: audioSampleRate,
       numberOfChannels: numberOfChannels,
       numberOfFrames: samples,
-      timestamp: timestamp,
+      timestamp,
       data: new Float32Array(buffer)
     });
     // audioEncoder中途不能flush，否则会重叠
@@ -162,6 +161,7 @@ class MP4Encoder {
   async flush(type) {
     await this.videoEncoder.flush();
     await this.audioEncoder.flush();
+    this.file.moov.mvhd.duration = this.endTime;
     return this.file.getBuffer();
   }
 }

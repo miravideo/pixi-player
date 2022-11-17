@@ -273,13 +273,18 @@ class MP4Decoder {
     // console.log('sample', type, samples.length, last.cts / last.timescale);
     if (type === 'probe') {
       if (track_id === this.vtrackId) {
+        this.frames += samples.length;
         for (const sample of samples) {
           if (sample.is_sync) this.kfs.push(sample.cts / sample.timescale);
         }
         // -0.1是为了避免最后缺帧
-        if (lastTime >= this.meta.duration - 0.1) {
+        let lastEnd = lastTime + (last.duration / last.timescale);
+        if (lastEnd >= this.meta.duration - 0.1) {
           this.meta.keyframes = this.kfs.length;
           this.meta.lastFrame = lastTime;
+          this.meta.frames = this.frames;
+          this.meta.duration = this.meta.duration || lastEnd;
+          this.meta.fps = (this.frames / lastEnd).toFixed(6);
           // console.log('probe done!!', this.kfs, performance.now() - this._probeStart);
           self.postMessage({ method: 'ready', meta: this.meta });
         }
@@ -339,8 +344,10 @@ class MP4Decoder {
 
     const atrack = info.audioTracks[0];
     if (atrack) {
+      let codec = atrack.codec;
+      if (codec === 'mp4a') codec = 'mp4a.40.2';
       this.aconfig = {
-        codec: atrack.codec,
+        codec,
         sampleRate: atrack.audio.sample_rate,
         numberOfChannels: atrack.audio.channel_count,
         sampleSize: atrack.audio.sample_size,
@@ -355,9 +362,10 @@ class MP4Decoder {
     const { width, height } = vtrack.video;
     const { sampleRate, numberOfChannels, sampleSize } = this.aconfig;
     const frames = vtrack.nb_samples;
-    const duration = vtrack.duration / vtrack.timescale;
+    const duration = info.duration ? (info.duration / info.timescale) : (vtrack.duration / vtrack.timescale);
     const fps = (frames / duration).toFixed(6);
     this.meta = { width, height, frames, duration, sampleRate, numberOfChannels, sampleSize, fps };
+    this.frames = 0;
 
     this.prepareCanvas();
     this.ready = true;

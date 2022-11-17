@@ -48,18 +48,17 @@ class Burner extends EventEmitter {
       audioSampleRate, numberOfChannels, 
     });
 
-    const tick = 1 / fps;
+    const totalFrames = Math.ceil(duration * fps);
     let i = 0, timer = 0, audioCursor = 0, vEncodePromise, aEncodePromise;
-    while (true) {
-      if (timer > duration || this.cancelled) {
-        break;
-      }
+    while (i < totalFrames) {
+      if (this.cancelled) break;
+      const timer = i / fps;
 
       // video
       const vPromise = player.getFrameImageData(timer, { format: 'bitmap' });
 
       // audio todo: size应该是1024的倍数？
-      const size = Math.round(Math.min(duration, timer + tick) * audioSampleRate) - (audioCursor / 2);
+      const size = Math.round(Math.min(duration, (i + 1) / fps) * audioSampleRate) - (audioCursor / 2);
       const aPromise = size ? player.getFrameAudioData(timer, { size }) : null;
 
       const [imageBitmap, audioBuffer,  _v, _a] = await Promise.all([
@@ -67,7 +66,7 @@ class Burner extends EventEmitter {
       if (this.cancelled) break;
 
       // todo: 在video/image切换的时候，设置kf，提前计算好
-      const keyFrame = i % fps === 0;
+      const keyFrame = i % 6 === 0;
       // todo: 在触发extract缓存video的时候，同时flush? 反正2个都要等待
       const flush = keyFrame;
       const timestamp = Math.round(1000000 * timer);
@@ -90,9 +89,7 @@ class Burner extends EventEmitter {
         audioCursor += audioBuffer.length * 2;
       }
 
-      timer += tick;
       i ++;
-
       const cost = (performance.now() - burnStart) * 0.001;
       const sx = timer / cost;
       const prog = Math.min(0.96, 0.96 * (timer / duration));
@@ -110,6 +107,9 @@ class Burner extends EventEmitter {
     this.emit('done', { id: this.jobId , output: url, qt, speed: sx, size });
     console.log('done', `frames: ${i}`, `speed: ${sx.toFixed(2)}x`, `size: ${size}`);
 
+    // clean up
+    this.worker.terminate();
+    this.worker = null;
     this.burning = false;
     return url;
   }
@@ -148,6 +148,10 @@ class Burner extends EventEmitter {
 
   async cancel() {
     if (!this.burning) return;
+    if (this.queue) this.queue.destroy();
+    this.queue = null;
+    if (this.worker) this.worker.terminate();
+    this.worker = null;
     this.cancelled = true;
     this.burning = false;
   }

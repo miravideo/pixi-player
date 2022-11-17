@@ -100,9 +100,9 @@ class Player extends EventEmitter {
     this.tickerCallback = async (delta) => {
       if (this.queue.length > 0) return; // 跳一帧
       this.queue.enqueue(async () => {
-        const ticker = 1000 / this.fps;
-        this._timer += ticker * this.playbackRate * 0.001;
-        const { currentTime, duration } = this;
+        const { currentTime, duration, fps } = this;
+        const tick = 1 / fps;
+        this._timer += tick * this.playbackRate;
         if (currentTime < duration) {
           // this.pptimer = this.pptimer || [];
           const _ss = performance.now();
@@ -119,7 +119,9 @@ class Player extends EventEmitter {
           // console.log(this.pptimer.reduce((a,b) => a+b, 0));
           console.log('render time', this._renderTime);
           this.app.stop();
-          await this.rootNode.draw(duration - 0.001, STATIC.VIEW_TYPE_SEEK);
+          // 显示最后一帧
+          const totalFrames = Math.ceil(duration * fps);
+          await this.rootNode.draw((totalFrames - 1) * tick, STATIC.VIEW_TYPE_SEEK);
           this.stopAudio();
           this.emit('timeupdate', {currentTime: duration, duration});
           this.emit('ended');
@@ -402,6 +404,13 @@ class Player extends EventEmitter {
       _canvas.width = data.width;
       _canvas.height = data.height;
       _ctx.putImageData(data, 0, 0);
+      src = _canvas.toDataURL("image/jpeg", 0.5);
+    } else if (data instanceof ImageBitmap) {
+      var _canvas = document.createElement('canvas');
+      var _ctx = _canvas.getContext('2d');
+      _canvas.width = data.width;
+      _canvas.height = data.height;
+      _ctx.drawImage(data, 0, 0);
       src = _canvas.toDataURL("image/jpeg", 0.5);
     } else if (data instanceof ArrayBuffer) {
       src = URL.createObjectURL(new Blob([data]));

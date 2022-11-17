@@ -55,14 +55,17 @@ class VideoMaterial extends ImageMaterial {
     const mtime = matTime - (this.ticker / 2);
     for (; i < this.frames.length; i++) {
       const frame = this.frames[i];
-      if (frame.t < mtime) this.closeFrame(frame, 'rollover');
-      else break;
+      if (frame.t > mtime) break;
     }
 
+    const ksize = 3;
     const frame = this.frames[i];
     // 可以接受1-2帧的误差，因为有些视频会缺帧
-    if (frame && Math.abs(frame.t - matTime) < this.ticker * 3) {
-      this.frames.splice(0, i);
+    if (frame && Math.abs(frame.t - matTime) < this.ticker * ksize) {
+      if (i > ksize) {
+        // 把过掉K帧以上的回收了
+        this.frames.splice(0, i - ksize).map(f => this.closeFrame(f, 'rollover'));
+      }
       if (this.frames.length < CACHE_FRAMES) {
         const lastTime = this.frames[this.frames.length - 1].t;
         if (lastTime < this.info.lastFrame) this.extract(lastTime);
@@ -87,6 +90,7 @@ class VideoMaterial extends ImageMaterial {
   closeFrame(frame, note) {
     frame.data.close();
     frame.note = note;
+    // console.log('closeFrame', frame.t, note);
   }
 
   async extract(matTime) {
@@ -141,7 +145,9 @@ class VideoMaterial extends ImageMaterial {
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
-    // console.log('!!frame', nodeTime.toFixed(3), time.toFixed(3), { lag, pool });
+    // console.log('!!frame', { 
+    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3), 
+    //   ft: frame.t.toFixed(3), lag, pool });
   }
 
   async getAudioFrame(nodeTime, frameSize) {
