@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "npx webpack --config webpack.config.js --node-env development --mode none --watch",
-    "build": "npx webpack --config webpack.config.js --node-env production --mode none"
+    "build": "npx webpack --config webpack.config.js --node-env production --mode none",
+    "serve": "node app.js"
   },
   "author": "ZhaoJun",
   "license": "MIT",
@@ -33,7 +34,8 @@
     "string-replace-loader": "^3.1.0",
     "style-loader": "^3.3.1",
     "webpack": "^5.64.1",
-    "webpack-cli": "^4.9.1"
+    "webpack-cli": "^4.9.1",
+    "fourier-transform": "^1.1.2"
   },
   "dependencies": {
     "@pixi/filter-drop-shadow": "^5.0.0",

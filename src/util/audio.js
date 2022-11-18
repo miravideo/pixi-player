@@ -1,8 +1,160 @@
 import XhrUtil from "./xhr";
+const fft = require('fourier-transform');
 
 const __cache = {};
 if (global) {
   global.PIXIPLR_ABR_CACHE = __cache;
+}
+
+class Analyser {
+  static defaultProperties = {
+    fftSize: 1024,
+  };
+
+  static KEYS = ['max', 'avg', 'min', 'fft', 'gain']
+
+  constructor(fftSize) {
+    this.properties = Analyser.defaultProperties;
+    this._time = 0;
+    if (fftSize) this.properties.fftSize = fftSize;
+    this.init();
+  }
+
+  blackMan(i, N) {
+    const a0 = 0.42,
+        a1 = 0.5,
+        a2 = 0.08,
+        f = 6.283185307179586 * i / (N - 1)
+
+    return a0 - a1 * Math.cos(f) + a2 * Math.cos(2*f)
+  }
+
+  init() {
+    const {
+      properties: { fftSize },
+    } = this;
+
+    // this.FFTParser = new FFTParser();
+    this.oriFFT = new Float32Array(fftSize / 2);
+    this.td = new Float32Array(fftSize);
+
+    this.blackmanTable = new Float32Array(fftSize);
+
+
+    for (let i = 0; i < fftSize; i++) {
+      this.blackmanTable[i] = this.blackMan(i, fftSize);
+    }
+
+    this.buffer = new Float32Array(fftSize);
+
+    this.last = {};
+  }
+
+  getFloatTimeDomainData(array) {
+    array.set(this.buffer);
+  }
+
+  getFloatFrequencyData(array) {
+    const { fftSize } = this.properties;
+    const waveform = new Float32Array(fftSize);
+
+    // Get waveform from buffer
+    this.getFloatTimeDomainData(waveform);
+
+    // Apply blackman function
+    for (let i = 0; i < fftSize; i++) {
+      waveform[i] = waveform[i] * this.blackmanTable[i] || 0;
+    }
+
+    const spectrum = fft(waveform);
+
+    for (let i = 0, n = fftSize / 2; i < n; i++) {
+      array[i] = spectrum[i];
+    }
+  }
+
+  getByteFrequencyData(array) {
+    const { fftSize } = this.properties;
+    const spectrum = new Float32Array(fftSize / 2);
+
+    this.getFloatFrequencyData(spectrum);
+
+    for (let i = 0, n = spectrum.length; i < n; i++) {
+      array[i] = spectrum[i] * 255 / 2;
+    }
+  }
+
+  process(input) {
+    const { fftSize } = this.properties;
+    const merged = new Float32Array(fftSize);
+
+    // 把所有chanel都相加，并根据fftSize切片
+    for (let chanelData of input) {
+      for (let i = 0; i < fftSize; i++) {
+        merged[i] += chanelData[i] || 0;
+      }
+    }
+
+    this.buffer = merged;
+    this.updateTimeData();
+    this.updateFrequencyData();
+    let max = this.td[0], min = this.td[0], total = 0;
+    for (let i = 0; i < this.td.length; i++) {
+      if (this.td[i] > max) {
+        max = this.td[i];
+      }
+
+      if (this.td[i] < min) {
+        min = this.td[i];
+      }
+
+      total += this.td[i];
+    }
+    this.max = max;
+    this.min = min;
+    this.avg = total / this.td.length;
+    this.fft = this.oriFFT;
+    this.gain = this.oriFFT.reduce((a, b) => a + b) / this.oriFFT.length;
+  }
+
+  slice(start, end, dataType='td') {
+    const data = this[dataType];
+    if (!data || start >= end) return
+    let max = data[0], min = data[0], total = 0;
+    for (let i = start; i < end; i++) {
+      if (data[i] > max) {
+        max = data[i];
+      }
+
+      if (data[i] < min) {
+        min = data[i];
+      }
+
+      total += data[i];
+    }
+    return {max, min, avg: total / (end - start)}
+  }
+
+  movingAverage(key, smooth) {
+    this.last[key] = (this.last[key] || this[key]) * smooth + this[key] * (1 - smooth);
+    return this.last[key]
+  }
+
+  updateFrequencyData() {
+    this.getByteFrequencyData(this.oriFFT);
+  }
+
+  updateTimeData() {
+    this.td = this.buffer;
+  }
+
+  destroy() {
+    this.fft = null;
+    this.oriFFT = null;
+    this.td = null;
+    this.last = null;
+    this.buffer = null;
+  }
 }
 
 const AudioUtil = {
@@ -132,7 +284,8 @@ const AudioUtil = {
   },
   mergeBuffers() {
     ;
-  }
+  },
+  Analyser
 };
 
 export default AudioUtil;

@@ -13,6 +13,7 @@ import { Rectangle, SCALE_MODES } from 'pixi.js'
 const DEFAULT_CONF = {
   x: '50vw', y: '50vh', anchor: [0.5, 0.5],
   scale: 1, rotation: 0, alpha: 1, speed: 1, volume: 1,
+  enableAudioAnalyser: false,
 };
 
 const VIEW_TYPES = {
@@ -207,6 +208,7 @@ class Clip extends EventEmitter {
     const view = this.getView(absTime, type);
     if (!view) return;
     if (this.onDraw(absTime)) {
+      if (this.getConf('enableAudioAnalyser')) await this.player.audioAnalyserProcess();
       // apply animation
       const attr = this.animationAttr(absTime);
       view.animationAttrChange = JSON.stringify(attr) !== JSON.stringify(view.animationAttr);

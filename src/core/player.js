@@ -21,6 +21,8 @@ class Player extends EventEmitter {
     this.numberOfChannels = numberOfChannels;
     this.volume = volume;
     this._timer = 0;
+    this.audioAnalyser = new AudioUtil.Analyser();
+    this._audioAnalyserCache = {};
   }
 
   async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view}) {
@@ -83,7 +85,7 @@ class Player extends EventEmitter {
     this.rootNode.allNodes.map(node => {
       node.annotate();
       this.log(
-        `annotate ${node.id.padEnd(10, ' ')}: ` + 
+        `annotate ${node.id.padEnd(10, ' ')}: ` +
         `show:[${node.absStartTime.toFixed(2).padStart(6, ' ')}, ${node.absEndTime.toFixed(2).padStart(6, ' ')})  ` +
         (!isNaN(node.absDrawStartTime) ? `draw:[${node.absDrawStartTime.toFixed(2).padStart(6, ' ')}, ${node.absDrawEndTime.toFixed(2).padStart(6, ' ')})  ` : '') +
         `duration:${node.duration.toFixed(0).padStart(6, ' ')}  ` +
@@ -126,7 +128,7 @@ class Player extends EventEmitter {
           this.emit('timeupdate', {currentTime: duration, duration});
           this.emit('ended');
         }
-  
+
         // 一定要，不然转场开始时会闪黑一下
         this.app.render();
       });
@@ -265,6 +267,24 @@ class Player extends EventEmitter {
       else return x.id === id;
     });
     return reg ? nodes : nodes[0];
+  }
+
+  async audioAnalyserProcess() {
+    const time = this.currentTime;
+    if (!this.playingAudioSource || this.audioAnalyser._time === time) return
+    if (!this._audioAnalyserCache[time]) {
+      this._audioAnalyserCache[time] = new Promise(async (resolve) => {
+        // todo 性能优化，搬到webWorker里
+        const audioData = await this.getFrameAudioData(time, {size: 1024});
+        if (audioData) {
+          this.audioAnalyser.process([audioData.getChannelData(0)])
+          this.audioAnalyser._time = time;
+        }
+        resolve();
+        delete this._audioAnalyserCache[time];
+      });
+    }
+    return this._audioAnalyserCache[time];
   }
 
   async getFrameAudioData(time, opts={}) {
@@ -439,7 +459,7 @@ class Player extends EventEmitter {
     img.width = 100;
     img.height = 100;
     img.src = src;
-    document.getElementById('test-images').append(img);  
+    document.getElementById('test-images').append(img);
   }
 
   toMiraML(asTemplate=true, indent=2) {
@@ -471,6 +491,10 @@ class Player extends EventEmitter {
     AudioUtil.clear(this.id);
     VideoSource.clear(this.id);
     // VideoHolder.release(this.id);
+    if (this.audioAnalyser) {
+      this.audioAnalyser.destroy();
+      this.audioAnalyser = null;
+    }
   }
 }
 
