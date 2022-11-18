@@ -321,11 +321,17 @@ class Player extends EventEmitter {
 
   async getFrameImageData(time, opts={}) {
     const { width: w, height: h } = this;
-    const vtype = STATIC.VIEW_TYPE_BURN;
-    const burner = this.burnerRenderer(w, h);
-    const view = this.rootNode.getView(vtype);
-    await this.rootNode.draw(time, vtype);
-    burner.render(view);
+
+    // 直接用player来烧，让画面同时动起来，感觉会快一些
+    const burner = this.app.renderer;
+    await this.rootNode.draw(time, STATIC.VIEW_TYPE_SEEK);
+    this.app.render();
+
+    // const vtype = STATIC.VIEW_TYPE_BURN;
+    // const burner = this.burnerRenderer(vtype, w, h);
+    // const view = this.rootNode.getView(vtype);
+    // await this.rootNode.draw(time, vtype);
+    // burner.render(view);
 
     if (opts?.format === 'bitmap') {
       return await createImageBitmap(burner.view);
@@ -352,12 +358,10 @@ class Player extends EventEmitter {
 
   async playAudio(start) {
     if (this.volume <= 0) return this.stopAudio();
+    const ss = performance.now();
     const frames = 10;
     const { numberOfChannels, fps } = this;
     const len = frames / fps;
-    // len - 0.1，留0.1s的安全距离，避免还在播放的部分被替换
-    if (this.playingAudioSource && this.playingAudioEnd - start > len - 0.1) return;
-    const ss = performance.now();
     if (!this.playingAudioSource) {
       const ab = await this.getAudioBuffer(start, frames * 2);
       const source = this.audioContext.createBufferSource();
@@ -368,15 +372,27 @@ class Player extends EventEmitter {
       this.playingAudioSource = source;
       this.playingAudioEnd = start + (len * 2);
       this.updateLastHalf = false;
-    } else {
-      const buffer = this.playingAudioSource.buffer;
-      const offset = this.updateLastHalf ? buffer.length * 0.5 : 0;
-      const ab = await this.getAudioBuffer(this.playingAudioEnd, frames);
-      for (let c = 0; c < numberOfChannels; c++) {
-        buffer.getChannelData(c).set(ab.getChannelData(c), offset);
-      }
-      this.updateLastHalf = !this.updateLastHalf;
-      this.playingAudioEnd += len;
+
+    // len - 0.1，留0.1s的安全距离，避免还在播放的部分被替换
+    } else if (this.playingAudioEnd - start < len - 0.1 && !this.audioPlayUpdating) {
+      this.audioPlayUpdating = true;
+      // 提前更新，不需要阻塞
+      this.getAudioBuffer(this.playingAudioEnd, frames).then(ab => {
+        const buffer = this.playingAudioSource.buffer;
+        const offset = this.updateLastHalf ? buffer.length * 0.5 : 0;
+        for (let c = 0; c < numberOfChannels; c++) {
+          buffer.getChannelData(c).set(ab.getChannelData(c), offset);
+        }
+        this.updateLastHalf = !this.updateLastHalf;
+        this.playingAudioEnd += len;
+        this.audioPlayUpdating = false;
+      });
+      // const ab = await this.getAudioBuffer(this.playingAudioEnd, frames);
+      // for (let c = 0; c < numberOfChannels; c++) {
+      //   buffer.getChannelData(c).set(ab.getChannelData(c), offset);
+      // }
+      // this.updateLastHalf = !this.updateLastHalf;
+      // this.playingAudioEnd += len;
     }
     this._renderTime.audio += performance.now() - ss;
   }

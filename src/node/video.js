@@ -35,6 +35,7 @@ class Video extends Image {
       if (-1 < dt && dt < 0 && playing) {
         this.material.prepare(this.absDrawStartTime - this.absStartTime, type);
       } else {
+        // pause会清空prepare状态
         this.material.pause();
       }
     }
