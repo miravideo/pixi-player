@@ -1,4 +1,5 @@
-
+// bitrate set diffrence from windows and mac
+const DEVICE_ADJ = navigator.userAgent.includes('Windows') ? 10 : 1;
 const TIME_SCALE = 90000;
 const MICRO_SECOUND = 1e6;
 const BR_MAP = { 
@@ -51,7 +52,7 @@ class MP4Encoder {
       hardwareAcceleration: "prefer-hardware",
       // There is a bug on macOS if this is greater than 30 fps
       // framerate: fps, // 其实encoder应该不管fps啊，每帧都有timestamp和duration的
-      bitrate: bitrate || Math.round(width * height * fps * br.v),
+      bitrate: bitrate || Math.round(width * height * fps * br.v * DEVICE_ADJ),
     }
 
     const trackOptions = {

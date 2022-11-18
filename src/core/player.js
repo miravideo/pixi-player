@@ -124,7 +124,7 @@ class Player extends EventEmitter {
           this.emit('timeupdate', {currentTime, duration});
         } else { // ended
           // console.log(this.pptimer.reduce((a,b) => a+b, 0));
-          console.log('render time', this._renderTime);
+          this.log('render time', JSON.stringify(this._renderTime));
           this.app.stop();
           // 显示最后一帧
           const totalFrames = Math.ceil(duration * fps);
