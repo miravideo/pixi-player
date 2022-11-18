@@ -115,7 +115,7 @@ class Burner extends EventEmitter {
     const size = `${(buffer.byteLength / (1024 ** 2)).toFixed(2)} MiB`;
     const sx = duration / qt;
     this.emit('done', { id: this.jobId , output: url, qt, speed: sx, size });
-    console.log('done', `frames: ${i}`, `speed: ${sx.toFixed(2)}x`, `size: ${size}`);
+    player.log('burn done!', `frames: ${i}`, `speed: ${sx.toFixed(2)}x`, `size: ${size}`);
 
     // clean up
     this.worker.terminate();

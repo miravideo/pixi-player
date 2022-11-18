@@ -340,6 +340,8 @@ class MP4Decoder {
       codedHeight: vtrack.video.height,
       codedWidth: vtrack.video.width,
       description: this.videoDescription(vtrack),
+      hardwareAcceleration: "prefer-hardware",
+      optimizeForLatency: true,
     };
     this.videoDecoder.configure(this.vconfig);
     this.vtrackId = vtrack.id;
