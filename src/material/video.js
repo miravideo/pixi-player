@@ -51,7 +51,13 @@ class VideoMaterial extends ImageMaterial {
     if (this.perpared) return;
     this.perpared = true;
     const { time, loops, overflow } = this.matTime(nodeTime);
-    this.extract(time);
+    const vp = this.extract(time);
+
+    // prepare audio cache
+    const { audioSampleRate, fps } = this.player;
+    const ap = this.getAudioFrame(nodeTime, Math.ceil(audioSampleRate / fps));
+
+    await Promise.all([vp, ap]);
   }
 
   velease(type) { }
@@ -106,11 +112,13 @@ class VideoMaterial extends ImageMaterial {
   }
 
   async extract(matTime) {
-    // todo: 考虑转场补帧的情况下，不在时间轴内的都不需要
-    if (this.extracting || matTime > this.getEndOffset(true)) return;
+    if (this.extracting) return;
+    // 考虑转场补帧的情况下，不在时间轴内的都不需要
+    const { time: maxTime } = this.matTime(this.node.absDrawEndTime - this.node.absStartTime);
+    if (matTime > maxTime) return;
     this.extracting = true;
     const ss = performance.now();
-    // console.log('extract start', matTime);
+    // console.log('extract start', this.node.id, matTime);
     const duration = CACHE_FRAMES / this.player.fps;
     const frames = await this.videoSource.extract('video', matTime, matTime + duration);
     if (!frames) return;
@@ -127,7 +135,12 @@ class VideoMaterial extends ImageMaterial {
       this.frames.map(f => this.closeFrame(f, 'refresh'));
       this.frames = frames;
     }
-    // console.log('extract done', matTime, performance.now() - ss, 'frames:', this.frames.length);
+    // console.log('extract done', this.node.id, matTime, {
+    //   cost_ms: (performance.now() - ss).toFixed(3), 
+    //   frames: this.frames.length,
+    //   from: this.frames[0].t.toFixed(3),
+    //   to: this.frames[this.frames.length-1].t.toFixed(3),
+    // });
     this.extracting = false;
     return true
   }
@@ -157,7 +170,7 @@ class VideoMaterial extends ImageMaterial {
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
-    // console.log('!!frame', { 
+    // console.log('!!frame', this.node.id, { 
     //   nt: nodeTime.toFixed(3), mt: time.toFixed(3), 
     //   ft: frame.t.toFixed(3), lag, pool });
   }
@@ -174,7 +187,7 @@ class VideoMaterial extends ImageMaterial {
        Math.round((time - this.audioCache.start) * audioSampleRate) : -1;
 
     if (startIndex < 0 || startIndex + frameSize > this.audioCache.length) {
-      // const ss = performance.now();
+      const ss = performance.now();
       const res = await this.videoSource.extract('audio', time, time + 1);
 
       let data = [], start, duration, matSampleRate;
@@ -206,7 +219,10 @@ class VideoMaterial extends ImageMaterial {
       this.audioCache = { start, length: data[0].length, data };
       // 更新startIndex 音频decode会有时间偏差，需要重新计算index
       startIndex = Math.round((time - start) * audioSampleRate);
-      // console.log(`audio cache ${matSampleRate}=>${audioSampleRate}`, nodeTime, this.audioCache.length, performance.now() - ss);
+      console.log(`!!audio cache ${matSampleRate}=>${audioSampleRate}`, this.node.id, { 
+        nt: nodeTime.toFixed(3), 
+        size: this.audioCache.length,
+        cost_ms: (performance.now() - ss).toFixed(3)});
     }
 
     const buffer = audioContext.createBuffer(numberOfChannels, frameSize, audioSampleRate);
