@@ -175,7 +175,9 @@ class VideoMaterial extends ImageMaterial {
 
     if (startIndex < 0 || startIndex + frameSize > this.audioCache.length) {
       // const ss = performance.now();
-      const res = await this.videoSource.extract('audio', time, time + 1);
+      // 缓存前面一部分和后面一部分
+      const _time = Math.max(0, time - 1);
+      const res = await this.videoSource.extract('audio', _time, _time + 2);
 
       let data = [], start, duration, matSampleRate;
       for (const ch of res) {
