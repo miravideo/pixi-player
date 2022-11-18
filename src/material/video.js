@@ -183,7 +183,7 @@ class VideoMaterial extends ImageMaterial {
     const { audioSampleRate, numberOfChannels, audioContext } = this.player;
 
     // 当前时间相对于缓存相对时间的index, 音频decode之后开始时间会前移一点点
-    let startIndex = this.audioCache && this.audioCache.start ?
+    let startIndex = this.audioCache && this.audioCache.start !== undefined ?
        Math.round((time - this.audioCache.start) * audioSampleRate) : -1;
 
     if (startIndex < 0 || startIndex + frameSize > this.audioCache.length) {
