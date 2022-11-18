@@ -105,17 +105,19 @@ class MP4Decoder {
       this.file.unsetExtractionOptions(this.vtrackId);
       this.file.unsetExtractionOptions(this.atrackId);
       if (item.type === 'video') {
-        // todo: 其实没必要...
+        // 如果下一个关键帧不远(1秒内)，就尽量缓存到下一个关键帧
         for (const kf of this.kfs) {
-          if (kf > item.start) break;
-          start = kf;
+          if (kf > item.end) {
+            if (kf - item.end < 1) item.end = kf;
+            break;
+          }
         }
-        // console.log('extractNext start', start, this.kfs);
+        // console.log('extractNext', {start: item.start, end: item.end });
         this.file.setExtractionOptions(this.vtrackId, 'video', { nbSamples: 100 });
       } else {
         this.file.setExtractionOptions(this.atrackId, 'audio', { nbSamples: 100 });
       }
-      this.file.seek(start, true);
+      this.file.seek(item.start, true);
       this.file.start();
     } catch (err) {
       this.extracting = false;

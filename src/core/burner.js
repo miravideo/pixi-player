@@ -20,7 +20,6 @@ class Burner extends EventEmitter {
     super();
     this.opts = {...DEFAULT_OPTS, ...opts};
     this.burning = false;
-    this.queue = new Queue();
   }
 
   async export(player, progress=()=>{}) {
@@ -30,7 +29,9 @@ class Burner extends EventEmitter {
       return false;
     }
 
+    player.lock();
     this.jobId = Utils.genUuid();
+    this.queue = new Queue();
     this.emit('start', { id: this.jobId });
 
     this.burning = true;
@@ -49,7 +50,8 @@ class Burner extends EventEmitter {
     });
 
     const totalFrames = Math.ceil(duration * fps);
-    let i = 0, timer = 0, audioCursor = 0, vEncodePromise, aEncodePromise;
+    let i = 0, timer = 0, audioCursor = 0;
+    let vEncodePromise = { res: true }, aEncodePromise = { res: true };
     while (i < totalFrames) {
       if (this.cancelled) break;
       const timer = i / fps;
@@ -61,14 +63,19 @@ class Burner extends EventEmitter {
       const size = Math.round(Math.min(duration, (i + 1) / fps) * audioSampleRate) - (audioCursor / 2);
       const aPromise = size ? player.getFrameAudioData(timer, { size }) : null;
 
-      const [imageBitmap, audioBuffer,  _v, _a] = await Promise.all([
+      const [imageBitmap, audioBuffer,  vEncode,        aEncode] = await Promise.all([
              vPromise,    aPromise,     vEncodePromise, aEncodePromise]);
       if (this.cancelled) break;
 
+      if (!vEncode?.res || !aEncode?.res) {
+        this.cancel();
+        break;
+      }
+
       // todo: 在video/image切换的时候，设置kf，提前计算好
       const keyFrame = i % fps === 0;
-      // todo: 在触发extract缓存video的时候，同时flush? 反正2个都要等待
-      const flush = keyFrame;
+      // flush，避免encoder的队列堆积占用内存过大
+      const flush = i > 0 && keyFrame;
       const timestamp = Math.round(1000000 * timer);
 
       vEncodePromise = this.workerExec({
@@ -97,9 +104,12 @@ class Burner extends EventEmitter {
       // console.log('burning', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
     }
 
+    player.unlock();
+    if (this.cancelled) return;
     const { buffer } = await this.workerExec({ method: 'flush' });
     progress && progress(0.99);
 
+    if (!buffer) return this.cancel();
     const qt = (performance.now() - burnStart) * 0.001;
     const url = URL.createObjectURL(new Blob([buffer], { type: "video/mp4" }));
     const size = `${(buffer.byteLength / (1024 ** 2)).toFixed(2)} MiB`;
@@ -122,6 +132,10 @@ class Burner extends EventEmitter {
   }
 
   async workerExec(data, buffer) {
+    if (!this.queue) {
+      this.cancel();
+      return {};
+    }
     return this.queue.enqueue(async () => {
       return new Promise((resolve, reject) => {
         const reqId = Utils.genUuid();

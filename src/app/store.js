@@ -77,6 +77,7 @@ class Store extends EventEmitter {
 
     if (!url) {
       // fail or cancel
+      this.toast('Fail!');
       runInAction(() => {
         this.loading = false;
         this.cancelFunc = null;

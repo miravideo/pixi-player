@@ -2,9 +2,9 @@
 const TIME_SCALE = 90000;
 const MICRO_SECOUND = 1e6;
 const BR_MAP = { 
-  low: { v: 0.01, a: 96000 }, 
-  default: { v: 0.02, a: 128000 },
-  high: { v: 0.04, a: 192000 },
+  low: { v: 0.02, a: 96000 }, 
+  default: { v: 0.04, a: 128000 },
+  high: { v: 0.06, a: 192000 },
 };
 
 const randId = () => {
@@ -124,12 +124,14 @@ class MP4Encoder {
   }
 
   async encode(data) {
+    let res;
     if (data.type === 'audio') {
-      await this.encodeAudio(data);
+      res = await this.encodeAudio(data);
     } else if (data.type === 'video') {
-      await this.encodeVideo(data);
+      res = await this.encodeVideo(data);
     }
     if (data.buffer.close) data.buffer.close();
+    return res;
   }
 
   async encodeVideo({ timestamp, keyFrame, flush, buffer }) {
@@ -138,9 +140,15 @@ class MP4Encoder {
       duration: this.tduration,
       alpha: "discard",
     });
-    this.videoEncoder.encode(vframe, { keyFrame });
-    if (flush) await this.videoEncoder.flush();
-    vframe.close();
+    try {
+      this.videoEncoder.encode(vframe, { keyFrame });
+      if (flush) await this.videoEncoder.flush();
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      vframe.close();
+    }
   }
 
   async encodeAudio({ timestamp, samples, buffer }) {
@@ -153,9 +161,15 @@ class MP4Encoder {
       timestamp,
       data: new Float32Array(buffer)
     });
-    // audioEncoder中途不能flush，否则会重叠
-    this.audioEncoder.encode(aframe);
-    aframe.close();
+    try {
+      // audioEncoder中途不能flush，否则会重叠
+      this.audioEncoder.encode(aframe);
+      return true;
+    } catch (e) {
+      return false;
+    } finally {
+      aframe.close();
+    }
   }
 
   async flush(type) {
@@ -172,8 +186,8 @@ self.addEventListener('message', async (e) => {
     encoder = new MP4Encoder(e.data);
     self.postMessage({ method: 'init', reqId: e.data.reqId });
   } else if (e.data.method === 'encode') {
-    await encoder.encode(e.data);
-    self.postMessage({ method: 'encode', reqId: e.data.reqId });
+    const res = await encoder.encode(e.data);
+    self.postMessage({ method: 'encode', reqId: e.data.reqId, res });
   } else if (e.data.method === 'flush') {
     const buffer = await encoder.flush(e.data.type);
     self.postMessage({ method: 'flush', reqId: e.data.reqId, buffer }, [buffer]);

@@ -204,7 +204,7 @@ class Player extends EventEmitter {
   }
 
   async play() {
-    if (this.playing || this.burning) return;
+    if (this.playing || this.locked) return;
     this._renderTime = { video: 0, audio: 0 };
     this.lastTime = this.audioContext.currentTime;
     if (this.currentTime > this.duration) {
@@ -221,8 +221,18 @@ class Player extends EventEmitter {
     }
   }
 
+  unlock() {
+    this.locked = false;
+  }
+
+  lock() {
+    if (this.locked) return;
+    this.pause();
+    this.locked = true;
+  }
+
   pause() {
-    if (this.burning) return;
+    if (this.locked) return;
     this.app.stop();
     this.stopAudio();
 
