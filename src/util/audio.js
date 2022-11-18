@@ -47,9 +47,7 @@ class Analyser {
 
     this.buffer = new Float32Array(fftSize);
 
-    this.smoothing = new Float32Array(fftSize / 2);
     this.last = {};
-    this.smoothings = {};
   }
 
   getFloatTimeDomainData(array) {
@@ -150,11 +148,12 @@ class Analyser {
     this.td = this.buffer;
   }
 
-  reset() {
-    this.fft.fill(0);
-    this.oriFFT.fill(0);
-    this.td.fill(0);
-    this.smoothing.fill(0);
+  destroy() {
+    this.fft = null;
+    this.oriFFT = null;
+    this.td = null;
+    this.last = null;
+    this.buffer = null;
   }
 }
 
