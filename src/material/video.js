@@ -157,8 +157,8 @@ class VideoMaterial extends ImageMaterial {
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
-    // console.log('!!frame', { 
-    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3), 
+    // console.log('!!frame', {
+    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3),
     //   ft: frame.t.toFixed(3), lag, pool });
   }
 
@@ -175,7 +175,7 @@ class VideoMaterial extends ImageMaterial {
 
     if (startIndex < 0 || startIndex + frameSize > this.audioCache.length) {
       // const ss = performance.now();
-      // 缓存前面一部分和后面一部分
+      // 缓存前面一秒和后面一秒
       const _time = Math.max(0, time - 1);
       const res = await this.videoSource.extract('audio', _time, _time + 2);
 

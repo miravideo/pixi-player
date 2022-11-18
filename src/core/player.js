@@ -475,6 +475,10 @@ class Player extends EventEmitter {
     AudioUtil.clear(this.id);
     VideoSource.clear(this.id);
     // VideoHolder.release(this.id);
+    if (this.audioAnalyser) {
+      this.audioAnalyser.destroy();
+      this.audioAnalyser = null;
+    }
   }
 }
 
