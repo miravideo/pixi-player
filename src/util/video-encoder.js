@@ -1,11 +1,9 @@
-// bitrate set diffrence from windows and mac
-const DEVICE_ADJ = navigator.userAgent.includes('Windows') ? 10 : 1;
 const TIME_SCALE = 90000;
 const MICRO_SECOUND = 1e6;
 const BR_MAP = { 
-  low: { v: 0.02, a: 96000 }, 
-  default: { v: 0.04, a: 128000 },
-  high: { v: 0.06, a: 192000 },
+  low: { v: 0.2, a: 96000 }, 
+  default: { v: 0.4, a: 128000 },
+  high: { v: 0.6, a: 192000 },
 };
 
 const randId = () => {
@@ -48,11 +46,13 @@ class MP4Encoder {
     const encoderOptions = {
       codec: "avc1.640834", // High
       width, height,
-      avc: { format: "avc" }, // annexb
+      avc: { format: "avc" },
       hardwareAcceleration: "prefer-hardware",
+      latencyMode: "realtime", // 只有设置为realtime时，windows和mac下对bitrate的表现才一致
+      alpha: "discard",
       // There is a bug on macOS if this is greater than 30 fps
       // framerate: fps, // 其实encoder应该不管fps啊，每帧都有timestamp和duration的
-      bitrate: bitrate || Math.round(width * height * fps * br.v * DEVICE_ADJ),
+      bitrate: bitrate || Math.round(width * height * fps * br.v),
     }
 
     const trackOptions = {
