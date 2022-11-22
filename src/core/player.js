@@ -25,6 +25,7 @@ class Player extends EventEmitter {
     this._timer = 0;
     this.audioAnalyser = new AudioUtil.Analyser(FFT_SIZE);
     this._audioAnalyserCache = {};
+    this.lastTime = 0;
   }
 
   async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view}) {
@@ -205,6 +206,7 @@ class Player extends EventEmitter {
   async play() {
     if (this.playing || this.burning) return;
     this._renderTime = { video: 0, audio: 0 };
+    this.lastTime = this.audioContext.currentTime;
     if (this.currentTime > this.duration) {
       // reset to start
       this._timer = 0;
