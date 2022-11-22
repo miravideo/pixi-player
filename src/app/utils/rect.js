@@ -1,10 +1,9 @@
 'use strict';
 
 const { MAX } = require('./static');
+const { mixin } = require('./plugin');
 const { rotate } = require('./math');
 const Point = require('./point');
-
-import PluginUtil from '../../util/plugin';
 
 const RectUtil = {
   intersect: (r1, r2) => {
@@ -91,6 +90,6 @@ class Rect extends DOMRect {
   }
 }
 
-PluginUtil.extends({ plugin: ExpandRect, tp: DOMRectReadOnly });
+mixin({ src: ExpandRect, dst: DOMRectReadOnly });
 
 module.exports = RectUtil;
