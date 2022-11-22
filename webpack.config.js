@@ -45,6 +45,14 @@ module.exports = {
         }
       },
       {
+        test: /\.(css|less)$/,
+        use: [
+          { loader: "style-loader", options: { attributes: { mira: "editor" } } },
+          'css-loader',
+          'less-loader',
+        ]
+      },
+      {
         test: /\.(frag|vert|glsl)$/,
         use: 'raw-loader'
       },

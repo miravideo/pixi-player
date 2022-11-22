@@ -12,6 +12,15 @@ const FrameNode = {
           return view;
         }
       });
+    PluginUtil
+      .wrap(obj.prototype, 'updateView')
+      .after(function (args, view) {
+        try {
+          return this._fn_updateFrame(view);
+        } catch (e) {
+          return view;
+        }
+      });
   },
 
   _fn_updateFrame(view) {

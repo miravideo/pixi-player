@@ -22,6 +22,13 @@ const VIEW_TYPES = {
   'preview': 'preview',
 }
 
+const VIEW_EVENTS = {
+  hover: ['mouseover', 'mouseout'],
+  movestart: ['mousedown', 'touchstart'],
+  // move: ['mousemove', 'touchmove'], // 会有性能问题
+  moveend: ['mouseup', 'mouseupoutside', 'touchend', 'touchendoutside']
+};
+
 DisplayObject.mixin({
   relativeScale: { x: 1.0, y: 1.0 },
   setBlur(blur) {
@@ -132,6 +139,7 @@ class Clip extends EventEmitter {
     this.parent = null;
     this.children = [];
     this._drawing = {};
+    this._events = {};
     this.init();
   }
 
@@ -169,8 +177,13 @@ class Clip extends EventEmitter {
   }
 
   getView(absTime, type) {
+    if (!absTime) absTime = this.player.currentTime;
+    if (!type) type = 'seek';
     const cacheType = this.cacheType(type);
-    if (!this._views[cacheType]) this._views[cacheType] = this.createView();
+    if (!this._views[cacheType]) {
+      this._views[cacheType] = this.createView();
+      if (cacheType === VIEW_TYPES.play) this.addViewEvent(this._views[cacheType]);
+    }
     if (this._views[cacheType]) {
       this._views[cacheType].refId = `${this.id}@${cacheType}`;
       this._views[cacheType].zIndex = this.zIndex;
@@ -247,12 +260,28 @@ class Clip extends EventEmitter {
 
   createView() {}
 
+  updateView() {
+    const view = this.getView();
+    // clear other type cache
+    Object.values(this._views).map(v => {
+      if (!v || v === view) return;
+      try {
+        v.destroy(true);
+      } catch (e) {}
+    });
+    return view;
+  }
+
   defaultVal(key) {
     return DEFAULT_CONF[key];
   }
 
   getConf(key, autounit=true) {
     if (!key || typeof(key) !== 'string' || !this.conf) return undefined;
+    autounit = !this.forceNoUnit(key) && autounit;
+
+    // todo: 处理 key=parent
+
     const defaultVal = this.defaultVal(key);
     let val;
     if (!key.includes('.')) {
@@ -274,9 +303,10 @@ class Clip extends EventEmitter {
 
   setConf(key, value, autounit=true) {
     if (!key || typeof(key) !== 'string') throw new Error(`Invalid key: ${key}`);
+    autounit = !this.forceNoUnit(key) && autounit;
     let obj = this.conf;
     if (autounit) {
-      value = this.vu(value, this.getParam(key));
+      value = this.vu(key, value, this.getConf(key, false));
     }
     if (!key.includes('.')) return obj[key] = value;
     let ks = key.split('.');
@@ -302,22 +332,33 @@ class Clip extends EventEmitter {
     ];
   }
 
-  vu(val, unitReferValue) {
+  forceUnit(key) {
+    return ['x', 'y', 'width', 'height'].includes(key);
+  }
+
+  forceNoUnit(key) {
+    return ['refId', 'id'].includes(key);
+  }
+
+  vu(key, val, unitReferValue) {
     let [inum, unit] = this.deunit(unitReferValue === undefined ? val : unitReferValue);
-    if (!unit) unit = 'rpx'; // todo: 强制rpx
-    if (typeof(data) === 'object') {
-      return Utils.dmap(data, x => this.enunit(this.px(x), unit));
+    if (!unit) {
+      if (this.forceUnit(key)) unit = 'rpx'; // todo: 强制rpx
+      else return val;
+    }
+    if (typeof(val) === 'object') {
+      return Utils.dmap(val, x => this.enunit(this.px(x), unit));
     } else {
-      return this.enunit(this.px(x), unit);
+      return this.enunit(this.px(val), unit);
     }
   }
 
-  px(data) {
-    if (typeof data === 'boolean') return data;
-    const num = Number(data);
+  px(val) {
+    if (typeof val === 'boolean') return val;
+    const num = Number(val);
     if (!isNaN(num)) return num;
-    if (typeof(data) === 'object') return Utils.dmap(data, x => this.px(x));
-    const [inum, unit] = this.deunit(data);
+    if (typeof(val) === 'object') return Utils.dmap(val, x => this.px(x));
+    const [inum, unit] = this.deunit(val);
     return inum;
   }
 
@@ -394,6 +435,10 @@ class Clip extends EventEmitter {
       // draw: 开始渲染，有可能是转场过程补帧
       return (absTime >= start && absTime < end && this.active);
     }
+  }
+
+  onTime() {
+    return this.onDraw(this.player.currentTime);
   }
 
   onShow(absTime) {
@@ -624,17 +669,6 @@ class Clip extends EventEmitter {
     return { volume, audioFrame };
   }
 
-  clearViewCache() {
-    if (this._views) {
-      Object.values(this._views).map(v => {
-        try {
-          v && v.destroy(true);
-        } catch (e) {}
-      });
-    }
-    this._views = null;
-  }
-
   toJson(asTemplate=false) {
     const conf = JSON.parse(JSON.stringify(this.conf));
     for (const key of Object.keys(conf)) {
@@ -656,6 +690,62 @@ class Clip extends EventEmitter {
     }
     removeInnerHTML(conf);
     return conf;
+  }
+
+  clearViewCache() {
+    if (this._views) {
+      Object.values(this._views).map(v => {
+        if (!v) return;
+        try {
+          v.interactive = false;
+          // todo: clear events
+          v.destroy(true);
+        } catch (e) {}
+      });
+    }
+    this._views = {};
+  }
+
+  addViewEvent(view) {
+    if (!view || !(view instanceof DisplayObject) || this.isViewContainer) return;
+    view.interactive = true;
+    if (this._events) {
+      // todo: unbind old events;
+    }
+    this._events = {
+      hover: this.onHover(),
+      movestart: this.onMoveStart(),
+      moveend: this.onMoveEnd(),
+    };
+    for (const [k, evts] of Object.entries(VIEW_EVENTS)) {
+      for (const evt of evts) {
+        view.on(evt, this._events[k]);
+      }
+    }
+  }
+
+  onHover(player) {
+    return (e) => {
+      e.stopPropagation();
+      e.target = this;
+      this.player.emit('hover', e);
+    }
+  }
+
+  onMoveStart() {
+    return (e) => {
+      e.stopPropagation();
+      e.target = this;
+      this.player.emit('movestart', e);
+    }
+  }
+
+  onMoveEnd() {
+    return (e) => {
+      e.stopPropagation();
+      e.target = this;
+      this.player.emit('moveend', e);
+    }
   }
 
   destroy() {

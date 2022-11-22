@@ -71,7 +71,7 @@ class MP4Encoder {
           videoTrack = this.file.addTrack(trackOptions);
         }
         const sample = this.addSample(videoTrack, chunk, { duration: this.tduration });
-        this.endTime = Math.max(sample.cts + sample.duration, this.endTime);
+        if (sample) this.endTime = Math.max(sample.cts + sample.duration, this.endTime);
       },
       error: (e) => console.error(e),
     });

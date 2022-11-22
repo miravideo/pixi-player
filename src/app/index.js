@@ -50,8 +50,32 @@ const Background = styled.div`
 `;
 
 const Canvas = styled.canvas`
-
+  transition-property: width height;
+  transition-duration: 0.3;
 `;
+
+const EditorBackground = styled.div`
+position: absolute;
+width: 100%;
+height: 100%;
+user-select:none;
+-webkit-user-select: none;
+pointer-events: none;
+`;
+
+const EditorContainer = styled.div`
+user-select:none;
+-webkit-user-select: none;
+pointer-events: none;
+`;
+
+const Editor = observer(({store}) => {
+  return (
+    <EditorBackground>
+      <EditorContainer style={store.canvasStyle} ref={store.editorRef}></EditorContainer>
+    </EditorBackground>
+  );
+});
 
 const Toast = styled.div`
 white-space: pre-wrap;
@@ -206,13 +230,16 @@ const ControlsBackground = styled.div`
 const Buttons = styled.div`
   margin: 10px 3px 0px 3px;
   display: flex;
-  pointer-events: auto;
+  user-select:none;
+  -webkit-user-select: none;
+  pointer-events: none;
 `;
 
 const Button = styled.div`
   width: 35px;
   height: 35px;
   margin: 5px;
+  pointer-events: auto;
 
   background-position: center;
   background-repeat: no-repeat;
@@ -347,8 +374,13 @@ const Controls = observer(({store}) => {
     auto: false,
   });
 
+  const style = {opacity: store.controlShow ? 1 : 0};
+  if (store.opt.controlsBackground) {
+    style.background = store.opt.controlsBackground;
+  }
+
   return (
-    <ControlsBackground style={{opacity: store.controlShow ? 1 : 0}}>
+    <ControlsBackground style={style}>
       <Buttons>
         <Button className={store.playing ? 'pause-button' : 'play-button'} 
           onClick={(e) => store.togglePlay()}></Button>
@@ -404,12 +436,13 @@ const Controls = observer(({store}) => {
 
 export const App = observer(({store}) => {
   return (
-    <Container ref={store.containerRef} tabIndex="-1" 
+    <Container ref={store.containerRef} tabIndex="-1" style={store.containerStyle}
       onKeyDown={(e) => store.keyDown(e)} onKeyUp={(e) => store.keyUp(e)}
       onMouseOver={() => store.showControls(true)} onMouseOut={() => store.showControls(false)}>
-      <Background onClick={() => store.togglePlay()}>
+      <Background onClick={(e) => store.clickCanvas(e)}>
         <Canvas style={store.canvasStyle} ref={store.canvasRef}/>
       </Background>
+      <Editor store={store}/>
       <Toast className={store.toastHide ? 'hide' : ''}><span>{store.toastMsg}</span></Toast>
       <Controls store={store}></Controls>
       {

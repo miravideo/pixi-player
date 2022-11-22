@@ -85,14 +85,21 @@ class Text extends Display {
     return super.px(val);
   }
 
-  vu(val, unitReferValue) {
+  vu(key, val, unitReferValue) {
     if (typeof(val) === 'string' && val.endsWith('%')) return val;
     const px = this.px(val);
     if (typeof(unitReferValue) === 'string' && unitReferValue.endsWith('%') && !isNaN(px)) {
       return `${Math.round(100 * (px / this.fontSize))}%`;
     } else {
-      return super.vu(val, unitReferValue);
+      return super.vu(key, val, unitReferValue);
     }
+  }
+
+  forceNoUnit(key) {
+    return [
+      'text', 'content', 'fontFamily', 'wordWrap', 'backgroundColor', 'stroke'
+    ].includes(key)
+     || super.forceNoUnit(key);
   }
 
   get text() {
@@ -188,57 +195,57 @@ class Text extends Display {
     // }
   }
 
-  get display() {
-    return this.getView(this.absStartTime, STATIC.VIEW_TYPE_PLAY);
-  }
-
   get displayOffset() {
-    const { display } = this;
-    const { x: ax, y: ay, width: dw, height: dh } = display.anchor;
-    const [ w, h ] = [this.getConf('width'), this.getConf('height')];
-    return { dx: (w - dw) * ax, dy: (h - dh) * ay };
+    // const view = this.getView();
+    // const { width: dw, height: dh } = view;
+    // const { x: ax, y: ay } = view.anchor;
+    // let [ w, h ] = [this.getConf('width'), this.getConf('height')];
+    // if (w === undefined) w = dw;
+    // if (h === undefined) h = dh;
+    // return { dx: (w - dw) * ax, dy: (h - dh) * ay };
+    // text的canvas强制尺寸了，就不存在offset了
+    return { dx: 0, dy: 0 };
   }
 
   selectStart(point) {
     // 转换为对display的坐标
     const { dx, dy } = this.displayOffset;
-    this.display.selectStart({ x: point.x - dx, y: point.y - dy });
+    this.getView().selectStart({ x: point.x - dx, y: point.y - dy });
   }
 
   selectEnd(point) {
     // 转换为对display的坐标
     const { dx, dy } = this.displayOffset;
-    this.display.selectEnd({ x: point.x - dx, y: point.y - dy });
+    this.getView().selectEnd({ x: point.x - dx, y: point.y - dy });
     this.player.render(); // refresh
   }
 
   selectMove({x: dx, y: dy}, withShift, withCtrl) {
-    // console.log('selectMove', {dx, dy, withShift, withCtrl});
-    this.display.selectMove(dx, dy, withShift, withCtrl);
+    this.getView().selectMove(dx, dy, withShift, withCtrl);
     this.player.render(); // refresh
   }
 
   selectClean() {
-    const { display } = this;
-    display.selectStart({ x: 0, y: 0 });
-    display.selectEnd({ x: 0, y: 0 });
+    const view = this.getView();
+    view.selectStart({ x: 0, y: 0 });
+    view.selectEnd({ x: 0, y: 0 });
     this.player.render();
   }
 
   delete() {
-    return this.display.delete();
+    return this.getView().delete();
   }
 
   selection() {
-    return this.display.selectionText();
+    return this.getView().selectionText();
   }
 
   input(text) {
-    return this.display.input(text);
+    return this.getView().input(text);
   }
 
   cursor() {
-    let { x, y, height } = this.display.cursor();
+    let { x, y, height } = this.getView().cursor();
     // 转换为对view的坐标
     const { dx, dy } = this.displayOffset;
     return { x: x + dx, y: y + dy, height };
@@ -249,6 +256,20 @@ class Text extends Display {
       return DEFAULT_CONF[key];
     }
     return super.defaultVal(key);
+  }
+
+  getConf(key, autounit=true) {
+    if (key === 'cursorIndex') {
+      return this.getView().cursor().ci;
+    }
+    return super.getConf(key, autounit);
+  }
+
+  setConf(key, value, autounit=true) {
+    if (key === 'cursorIndex') {
+      return this.getView().cursor(value);
+    }
+    return super.setConf(key, value, autounit);
   }
 
   toJson(asTemplate=false) {

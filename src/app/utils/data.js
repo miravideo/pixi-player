@@ -1,40 +1,25 @@
-const cache = {};
+'use strict';
 
-const Utils = {
-  isUA(key) {
-    return navigator && navigator.userAgent.toLowerCase().includes(key.toLowerCase());
+const DataUtil = {
+  zip: (keys, values) => {
+    return Object.assign(...keys.map((k, i) => ({[k]: values[i]})));
   },
-
-  isMoble() {
-    const ua = navigator && navigator.userAgent.toLowerCase();
-    return (/mobile|android|iphone|ipad|phone/i.test(ua));
+  ucfirst: (str) => {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
   },
-
-  isWeChat() {
-    return this.isUA('micromessenger');
-  },
-
-  deql(src, dst) {
-    return Object.entries(dst).every(([k, v]) => src[k] == v);
-  },
-
-  dmap(src, func, keys=[]) {
+  dmap: (src, func, keys=[]) => {
+    if (typeof(src) !== 'object') return func(src);
     const dst = Array.isArray(src) ? [] : {};
     const arr = Array.isArray(src) ? src.map((a, i) => [i, a]) : Object.entries(src);
     for (const [key, value] of arr) {
       const _keys = [...keys, key];
-      if (typeof value === 'object') dst[key] = this.dmap(value, func, _keys);
+      if (typeof value === 'object') dst[key] = DataUtil.dmap(value, func, _keys);
       else dst[key] = func(value, key, _keys);
     }
     return dst;
   },
-
-  genId(type) {
-    if (cache[type] === undefined) cache[type] = 1;
-    return type + '_' + String(cache[type]++);
-  },
-
-  genUuid() {
+  uuid: () => {
     let d = new Date().getTime();//Timestamp
     let d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now()*1000)) || 0;//Time in microseconds since page-load or 0 if unsupported
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -49,12 +34,15 @@ const Utils = {
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
     }).toUpperCase();
   },
+  short: (str, max, tailLen=0) => {
+    if (!str) return str;
+    const strArr = Array.from(str);
+    const len = strArr.length;
+    if (len < max || max < tailLen) return str;
+    const tail = tailLen > 0 ? strArr.slice(- tailLen).join('') : '';
+    const head = strArr.slice(0, max - tailLen - 3).join('');
+    return `${head}...${tail}`;
+  }
+}
 
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  },
-
-  storage: {},
-};
-
-export default Utils;
+module.exports = DataUtil;
