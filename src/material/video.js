@@ -170,8 +170,8 @@ class VideoMaterial extends ImageMaterial {
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
-    // console.log('!!frame', this.node.id, { 
-    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3), 
+    // console.log('!!frame', this.node.id, {
+    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3),
     //   ft: frame.t.toFixed(3), lag, pool });
   }
 

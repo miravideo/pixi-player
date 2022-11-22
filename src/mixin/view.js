@@ -1,5 +1,10 @@
 import PluginUtil from '../util/plugin';
 
+const aliasMapping = {
+  'rotation': 'rotate',
+  'alpha': 'opacity',
+}
+
 const ViewNode = {
   initHook(obj) {
     PluginUtil
@@ -18,7 +23,11 @@ const ViewNode = {
     const keys = this.viewAttrKeys || ['x', 'y', 'width', 'height', 'anchor', 'alpha', 'rotation'];
     const attrs = {};
     for (const key of keys) {
-      const val = this.getConf(key);
+      let val = this.getConf(key);
+      if (aliasMapping[key]) {
+        const _val = this.getConf(aliasMapping[key]);
+        if (_val !== undefined) val = _val;
+      }
       if (val !== undefined) attrs[key] = val;
     }
     view.attr(attrs);
