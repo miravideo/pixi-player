@@ -106,7 +106,9 @@ class Player extends EventEmitter {
       this.queue.enqueue(async () => {
         const { currentTime, duration, fps } = this;
         const tick = 1 / fps;
-        this._timer += tick * this.playbackRate;
+        this._timer += this.audioContext.currentTime - this.lastTime;
+        this.lastTime = this.audioContext.currentTime;
+
         if (currentTime < duration) {
           // this.pptimer = this.pptimer || [];
           const _ss = performance.now();
