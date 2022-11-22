@@ -136,7 +136,7 @@ class VideoMaterial extends ImageMaterial {
       this.frames = frames;
     }
     // console.log('extract done', this.node.id, matTime, {
-    //   cost_ms: (performance.now() - ss).toFixed(3), 
+    //   cost_ms: (performance.now() - ss).toFixed(3),
     //   frames: this.frames.length,
     //   from: this.frames[0].t.toFixed(3),
     //   to: this.frames[this.frames.length-1].t.toFixed(3),
@@ -170,8 +170,8 @@ class VideoMaterial extends ImageMaterial {
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';
     // const pool = this.frames.length;
-    // console.log('!!frame', this.node.id, { 
-    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3), 
+    // console.log('!!frame', this.node.id, {
+    //   nt: nodeTime.toFixed(3), mt: time.toFixed(3),
     //   ft: frame.t.toFixed(3), lag, pool });
   }
 
@@ -221,10 +221,10 @@ class VideoMaterial extends ImageMaterial {
       this.audioCache = { start, length: data[0].length, data };
       // 更新startIndex 音频decode会有时间偏差，需要重新计算index
       startIndex = Math.round((time - start) * audioSampleRate);
-      console.log(`!!audio cache ${matSampleRate}=>${audioSampleRate}`, this.node.id, { 
-        nt: nodeTime.toFixed(3), 
-        size: this.audioCache.length,
-        cost_ms: (performance.now() - ss).toFixed(3)});
+      // console.log(`!!audio cache ${matSampleRate}=>${audioSampleRate}`, this.node.id, {
+      //   nt: nodeTime.toFixed(3),
+      //   size: this.audioCache.length,
+      //   cost_ms: (performance.now() - ss).toFixed(3)});
     }
 
     const buffer = audioContext.createBuffer(numberOfChannels, frameSize, audioSampleRate);
