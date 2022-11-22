@@ -1,0 +1,88 @@
+@import "./global.less";
+
+.mirae-resize[mira-editor-el] {
+  .controlBox();
+
+  &.hide {
+    pointer-events: none;
+  }
+
+  &.dot {
+    &:after {
+      width: @dotR;
+      height: @dotR;
+      .control(@dotR*0.5 + 1);
+    }
+  }
+
+  &.hor {
+    width: 100%;
+    height: @ctlSize;
+
+    &:after {
+      width: @barW;
+      height: @barH;
+      .control(@barH*0.5);
+    }
+  }
+
+  &.ver {
+    width: @ctlSize;
+    height: 100%;
+
+    &:after {
+      width: @barH;
+      height: @barW;
+      .control(@barH*0.5);
+    }
+  }
+
+  &.top {
+    top: 0;
+    margin-top: -(@ctlSize/2);
+    &:after {
+      margin-top: -2px;
+    }
+  }
+
+  &.bottom {
+    bottom: 0;
+    margin-bottom: -(@ctlSize/2);
+    &:after {
+      margin-bottom: -2px;
+    }
+  }
+
+  &.left {
+    left: 0;
+    margin-left: -(@ctlSize/2);
+    &:after {
+      margin-left: -2px;
+    }
+  }
+
+  &.right {
+    right: 0;
+    margin-right: -(@ctlSize/2);
+    &:after {
+      margin-right: -2px;
+    }
+  }
+}
+
+.ra(@trans) {
+  cursor: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cdefs%3E%3Cfilter id='a' width='150%25' height='150%25' x='-25%25' y='-17.9%25' filterUnits='objectBoundingBox'%3E%3CfeOffset dy='1' in='SourceAlpha' result='shadowOffsetOuter1'/%3E%3CfeGaussianBlur in='shadowOffsetOuter1' result='shadowBlurOuter1' stdDeviation='1'/%3E%3CfeColorMatrix in='shadowBlurOuter1' result='shadowMatrixOuter1' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3CfeMerge%3E%3CfeMergeNode in='shadowMatrixOuter1'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath d='M0 0h24v24H0z'/%3E%3Cg filter='url(%23a)' transform='@{trans}'%3E%3Cpath fill='%23FFF' d='M4.257 7.087l4.072 4.068L5.5 13.983l8.473-.013.013-8.47-2.841 2.842L7.07 4.274 5.656 2.859 8.5.017H.014v8.484l2.829-2.827z'/%3E%3Cpath fill='%23000' d='M5.317 6.733l4.427 4.424-1.828 1.828 5.056-.016.014-5.054-1.842 1.841-4.428-4.422-2.474-2.475 1.844-1.843H1.013v5.071l1.83-1.828z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") 12 12, auto;
+}
+
+.mirae-rze-cursor[r="0"] { .ra("scale(-1 1) rotate(45 -8.536 -13.435)") }
+.mirae-rze-cursor[r="1"] { .ra("scale(-1 1) rotate(30 -11.83 -25.954)") }
+.mirae-rze-cursor[r="2"] { .ra("scale(-1 1) rotate(15, -21.49, -62.66)") }
+.mirae-rze-cursor[r="3"] { .ra("matrix(-1 0 0 1 19 5)") }
+.mirae-rze-cursor[r="4"] { .ra("scale(-1 1) rotate(-15, 16.49, 81.66)") }
+.mirae-rze-cursor[r="5"] { .ra("scale(-1 1) rotate(-30, 6.83, 44.954)") }
+.mirae-rze-cursor[r="6"] { .ra("scale(-1 1) rotate(-45, 3.536, 32.435)") }
+.mirae-rze-cursor[r="7"] { .ra("rotate(-30 18.83 .17)") }
+.mirae-rze-cursor[r="8"] { .ra("rotate(-15 28.49 -9.49)") }
+.mirae-rze-cursor[r="9"] { .ra("translate(5 5)") }
+.mirae-rze-cursor[r="10"] { .ra("rotate(15 -9.49 28.49)") }
+.mirae-rze-cursor[r="11"] { .ra("rotate(30 .17 18.83)") }

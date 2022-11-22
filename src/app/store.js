@@ -3,7 +3,8 @@ import { makeObservable, runInAction, observable } from 'mobx';
 import React from "react";
 import EventEmitter from "eventemitter3";
 const { Player, Burner } = global['pixi-player'] || {};
-import { version } from '../../package.json';
+import pkg from '../../package.json';
+import { color } from './utils/color';
 
 const PRELOAD_RATIO = 0.1;
 const KEYS = { space:' ', left:'ArrowLeft', right:'ArrowRight' };
@@ -15,8 +16,10 @@ class Store extends EventEmitter {
     this.opt = opt;
     this.containerRef = React.createRef();
     this.canvasRef = React.createRef();
+    this.editorRef = React.createRef();
 
     // state
+    this.enabled = true;
     this.muted = false;
     this.loading = false;
     this.loaded = false;
@@ -172,11 +175,30 @@ class Store extends EventEmitter {
     if (!this.loaded) return {};
     let width = this.player.width;
     let height = this.player.height;
-    this.scale = Math.min(this.opt.width / width, this.opt.height / height);
+    let [ctrWidth, ctrHeight] = [this.opt.width, this.opt.height];
+    if (this.opt.outsideControls) ctrHeight -= 70; // todo: hardcode
+    let top = 0, left = 0;
+    if (this.opt.padding || this.opt.paddingX || this.opt.paddingY) {
+      let [paddingX, paddingY] = [
+        `${this.opt.paddingX !== undefined ? this.opt.paddingX : (this.opt.padding || 0)}`, 
+        `${this.opt.paddingY !== undefined ? this.opt.paddingY : (this.opt.padding || 0)}`
+      ];
+      if (paddingX.endsWith('%')) paddingX = paddingX.replace('%', '') * 0.01 * ctrWidth;
+      if (paddingY.endsWith('%')) paddingY = paddingY.replace('%', '') * 0.01 * ctrHeight;
+      if (!isNaN(paddingX)) {
+        left = Number(paddingX);
+        ctrWidth = Math.round(ctrWidth - (left * 2));
+      }
+      if (!isNaN(paddingY)) {
+        top = Number(paddingY);
+        ctrHeight = Math.round(ctrHeight - (top * 2));
+      }
+    }
+    this.scale = Math.min(ctrWidth / width, ctrHeight / height);
     width = (this.scale * width) >> 0;
     height = (this.scale * height) >> 0;
-    const marginLeft = (this.opt.width - width) / 2;
-    const marginTop = (this.opt.height - height) / 2;
+    const marginLeft = left + (ctrWidth - width) / 2;
+    const marginTop = top + ((ctrHeight - height) / 2);
     runInAction(() => {
       this.canvasStyle = {
         ctrWidth: this.opt.width, ctrHeight: this.opt.height,
@@ -185,8 +207,22 @@ class Store extends EventEmitter {
     });
   }
 
+  get containerStyle() {
+    const style = {};
+    if (this.opt.background) {
+      style.background = this.opt.background;
+    }
+    return style;
+  }
+
+  clickCanvas(e) {
+    this.player.emit('click', e.nativeEvent);
+    if (this.opt.disableClickPlay) return;
+    this.togglePlay();
+  }
+
   togglePlay() {
-    if (!this.loaded) return;
+    if (!this.loaded || !this.enabled) return;
     if (this.playing) {
       this.player.pause();
     } else {
@@ -223,6 +259,7 @@ class Store extends EventEmitter {
   }
 
   keyUp(e) {
+    if (!this.enabled || !this.opt.enableKeyboard) return;
     if (e.key === KEYS.space) {
       this.togglePlay();
     } else if ([KEYS.left, KEYS.right].includes(e.key)) {
@@ -245,6 +282,7 @@ class Store extends EventEmitter {
   }
 
   showControls(show) {
+    if (!this.enabled) return;
     show = this.playing ? show : true;
     if (this.showCtrlTimer) clearTimeout(this.showCtrlTimer);
     this.showCtrlTimer = setTimeout(() => {
@@ -254,6 +292,19 @@ class Store extends EventEmitter {
         this.controlShow = show;
       });
     }, 100);
+  }
+
+  enableControls(enable) {
+    runInAction(() => {
+      this.controlShow = enable;
+      this.enabled = enable;
+    });
+  }
+
+  editable(enable) {
+    this.opt.disableClickPlay = enable;
+    this.opt.outsideControls = enable;
+    this.fit();
   }
 
   cancelLoading() {
@@ -362,16 +413,21 @@ class Store extends EventEmitter {
 
     if (items.length > 0) {
       items.push('-');
-      items.push({ title: 'PIXI Player', desc: `v${version}`});
+      items.push({ title: 'PIXI Player', desc: `v${pkg.version}`});
       runInAction(() => {
         this.showMenu = { items };
       });
     }
   }
 
+  get version() {
+    return pkg.version;
+  }
+
   destroy() {
     this.containerRef = null;
     this.canvasRef = null;
+    this.editorRef = null;
     if (this.player) this.player.destroy();
     this.player = null;
     if (this.burner) this.burner.destroy();

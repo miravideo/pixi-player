@@ -1,0 +1,322 @@
+@import "./global.less";
+
+.no-head[mira-editor-el] {
+  .track-btn {
+    display: none !important;
+  }
+}
+
+.mirae-track[mira-editor-el] {
+  @top: 4px;
+  @hoverBg: #292933;
+  @iconColor: "FFF"; // 不带#!!
+  @iconSize: 13px;
+  @iconBtnSize: 20px;
+  @iconBtnMargin: 8px;
+
+  display: block;
+  position: relative;
+  height: 50px;
+  border-top: @top solid @boardBg;
+  background: @trackBg;
+  margin: 0px;
+  margin-top: @top;
+  padding: 0;
+  left: var(--trackHeadWidth);
+  pointer-events: auto;
+
+  ::before {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  ::after {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .head {
+    pointer-events: none;
+    position: absolute;
+    left: -150px;
+    width: 150px;
+    height: 100%;
+    z-index: 10; // 盖住超出的node
+    background-color: fade(@trackBg, 80%);
+
+    &:before {
+      // for insert clip upside
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 2px;
+      top: (-(@top / 2) - 1px);
+      background: transparent;
+    }
+
+  }
+
+  .icon-btn() {
+    pointer-events: auto;
+    cursor: pointer;
+    background-color: rgba(54, 54, 91, 0.8);
+    position: absolute;
+    width: @iconBtnSize;
+    height: @iconBtnSize;
+    top: 50%;
+    z-index: 13;
+    transform: translateY(-50%);
+    border-radius: @iconBtnSize * 0.5;
+
+    &:hover {
+      background-color: rgba(88, 88, 100, 0.8);
+    }
+  }
+
+  @btnLeft: -115px;
+  .track-icon-btn {
+    .icon-btn();
+    left: @btnLeft;
+    width: @iconBtnSize + 4;
+    height: @iconBtnSize + 4;
+    border-radius: 5px;
+    background-color: transparent;
+
+    &:hover {
+      .btn-tint(attr(data-tint), @iconBtnSize + 4);
+    }
+  }
+
+  .track-on-btn() {
+    background-color: @trackBtnOnBg;
+    &:hover {
+      background-color: @trackBtnOnBgHover;
+    }
+  }
+
+  .track-off-btn() {
+    background-color: @trackBtnOffBg;
+    &:hover {
+      background-color: @trackBtnOffBgHover;
+    }
+  }
+
+  .track-audio-btn {
+    .icon-btn();
+    .track-on-btn();
+    .icon-speaker-on(@iconColor, @iconSize);
+    left: @btnLeft + @iconBtnSize + @iconBtnMargin;
+
+    &.track-audio-off {
+      .track-off-btn();
+      .icon-speaker-off(@iconColor, @iconSize);
+    }
+  }
+
+  .track-visible-btn {
+    .icon-btn();
+    .track-on-btn();
+    .icon-visible-on(@iconColor, @iconSize + 3);
+    left: @btnLeft + (@iconBtnSize + @iconBtnMargin) * 2;
+
+    &.track-visible-off {
+      .track-off-btn();
+      .icon-visible-off(@iconColor, @iconSize + 3);
+    }
+  }
+
+  .track-arrange-btn {
+    .icon-btn();
+    .track-off-btn();
+    .icon-magnet(@iconColor, @iconSize + 10);
+    left: @btnLeft + (@iconBtnSize + @iconBtnMargin) * 3;
+
+    &:hover {
+      .btn-tint(attr(data-tint), @iconBtnSize + 4);
+    }
+  }
+
+  .go-back-btn {
+    .icon-btn();
+    .icon-arrow(@iconColor, @iconSize);
+    background-position: 6px center;
+    background-color: var(--miraeSelBorderColor);
+    top: 18px;
+    left: -70px;
+    width: 62px;
+
+    &:after {
+      content: "返回";
+      color: #FFF;
+      font-size: 12px;
+      line-height: @iconBtnSize;
+      position: absolute;
+      left: @iconBtnSize;
+    }
+  }
+
+  &:hover {
+    background-color: @hoverBg !important;
+    .head {
+      background-color: fade(@hoverBg, 80%) !important;
+    }
+  }
+
+  &.hide {
+    // 不能直接 display: none 否则 top 是负的，无法再次复用了
+    border: 0!important;
+    height: 0!important;
+  }
+
+  &:after {
+    content: attr(data-name);
+    position: absolute;
+    width: 100%;
+    height: 12px;
+    top: 0px;
+    left: calc(0px - var(--trackHeadWidth));
+    color: #FFF;
+    font-size: 12px;
+    background: transparent;
+  }
+
+  &:before {
+    // for insert clip upside
+    content: "";
+    position: absolute;
+    // width: 100%;
+    width: var(--maxWidth);
+    height: 2px;
+    top: (-(@top / 2) - 1px);
+    background: transparent;
+  }
+
+  &.ruler {
+    @rulerBg: rgba(23, 23, 29, 0.9);
+    z-index: 100;
+    position: sticky;
+    top: 0px;
+    height: 18px;
+    border: 0px;
+    margin: 0px;
+    padding: 0px;
+    background: @rulerBg;
+    margin-bottom: 18px;
+
+    .head {
+      background-color: transparent;
+    }
+
+    &:hover {
+      background: @rulerBg !important;
+      .head {
+        background-color: transparent !important;
+      }
+
+      .mark {
+        &:after {
+          opacity: 1;
+        }
+      }
+
+      .cursor {
+        &:after {
+          opacity: 1;
+        }
+      }
+    }
+  }
+
+  &.mirae-track-spine {
+    @spineBg: #313147;
+    background: @spineBg;
+    height: @videoHeight;
+    margin-top: 0px;
+    border-top-width: 0px;
+
+    .track-icon-btn {
+      .icon-video(@iconColor, @iconSize);
+    }
+
+    .head {
+      background: @spineBg;
+    }
+  }
+
+  &.mirae-track-video {
+    height: (@videoHeight+@top);
+
+    .track-icon-btn {
+      .icon-video(@iconColor, @iconSize);
+    }
+  }
+
+  &.mirae-track-text {
+    height: @textHeight;
+
+    .track-icon-btn {
+      .icon-text(@iconColor, @iconSize);
+    }
+  }
+
+  &.mirae-track-sticker {
+    height: @stickerHeight;
+
+    .track-icon-btn {
+      .icon-sticker(@iconColor, @iconSize);
+    }
+  }
+
+  &.mirae-track-audio {
+    height: @audioHeight;
+
+    .track-icon-btn {
+      .icon-audio(@iconColor, @iconSize);
+    }
+  }
+
+  &.mirae-track-placeholder {
+    background: transparent;
+
+    .track-icon-btn {
+      display: none;
+    }
+
+    &:after {
+      content: "";
+    }
+
+    &.mirae-track-placeholder-bottom {
+      height: 30px;
+    }
+
+    &.mirae-track-placeholder-top {
+      height: 0px;
+    }
+
+    .head {
+      background-color: transparent;
+    }
+
+    &:hover {
+      background: transparent !important;
+      .head {
+        background: transparent !important;
+      }
+    }
+  }
+
+  &.top-insert {
+    &:before {
+      background-color: var(--miraeSelBorderColor);
+    }
+
+    .head {
+      &:before {
+        background-color: var(--miraeSelBorderColor);
+      }
+    }
+  }
+}

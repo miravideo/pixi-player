@@ -422,20 +422,11 @@ export class EditableText extends Text {
     context.scale(this._resolution, this._resolution);
     context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // background
-    this.drawBackground(style);
-
-    // selection
-    this.drawSelection();
-
     context.font = this._font;
     context.lineWidth = style.strokeThickness;
     context.textBaseline = style.textBaseline;
     context.lineJoin = style.lineJoin;
     context.miterLimit = style.miterLimit;
-
-    let linePositionX;
-    let linePositionY;
 
     // require 2 passes if a shadow; the first to draw the drop shadow, the second to draw the text
     const passesCount = style.dropShadow ? 2 : 1;
@@ -490,6 +481,23 @@ export class EditableText extends Text {
       paddingOffsetY = style.padding;
     }
 
+    let linePositionYShift = (lineHeight - fontProperties.fontSize) / 2;
+    if (lineHeight - fontProperties.fontSize < 0) {
+      linePositionYShift = 0;
+    }
+
+    let linePositionX;
+    let linePositionY;
+
+    this.offsetX = alignOffsetX + paddingOffsetX + dsOffsetX + (style.strokeThickness / 2);
+    this.offsetY = alignOffsetY + paddingOffsetY + dsOffsetY + (style.strokeThickness / 2) + linePositionYShift;
+
+    // background
+    this.drawBackground(style);
+
+    // selection
+    this.drawSelection();
+
     for (let i = 0; i < passesCount; ++i) {
       const isShadowPass = style.dropShadow && i === 0;
       // we only want the drop shadow, so put text way off-screen
@@ -526,17 +534,10 @@ export class EditableText extends Text {
         context.shadowOffsetY = 0;
       }
 
-      let linePositionYShift = (lineHeight - fontProperties.fontSize) / 2;
-
-      if (lineHeight - fontProperties.fontSize < 0) {
-        linePositionYShift = 0;
-      }
-
       // draw lines line by line
       for (let i = 0; i < lines.length; i++) {
-        linePositionX = alignOffsetX + dsOffsetX + (style.strokeThickness / 2);
-        linePositionY = alignOffsetY + dsOffsetY + ((style.strokeThickness / 2) + (i * lineHeight)) + fontProperties.ascent
-            + linePositionYShift;
+        linePositionX = this.offsetX;
+        linePositionY = this.offsetY + (i * lineHeight) + fontProperties.ascent;
 
         if (style.align === 'right') {
           linePositionX += maxLineWidth - lineWidths[i];
@@ -547,8 +548,8 @@ export class EditableText extends Text {
         if (style.stroke && style.strokeThickness) {
           this.drawLetterSpacing(
             lines[i],
-            linePositionX + paddingOffsetX,
-            linePositionY + paddingOffsetY - dsOffsetText,
+            linePositionX,
+            linePositionY - dsOffsetText,
             true
           );
         }
@@ -558,8 +559,8 @@ export class EditableText extends Text {
           const lastCharIdx = lastLine ? lastLine[lastLine.length - 1].ci : -1;
           const lineChars = this.drawLetterSpacing(
             lines[i],
-            linePositionX + paddingOffsetX,
-            linePositionY + paddingOffsetY - dsOffsetText,
+            linePositionX,
+            linePositionY - dsOffsetText,
             false, 
             lastCharIdx + 1
           );
@@ -668,8 +669,6 @@ export class EditableText extends Text {
     if (ftext) {
       context.fillStyle = background;
       context.fillRect(0, 0, canvas.width, canvas.height);
-    } else {
-      context.clearRect(0, 0, canvas.width, canvas.height);
     }
   }
 
@@ -691,17 +690,17 @@ export class EditableText extends Text {
       const charEnd = li === end.lineIdx ? end.x : 
         (this.chars[li][this.chars[li].length - 1]?.right || 0);
       this.context.fillStyle = this._style.selectionBgColor;
-      this.context.fillRect(charStart, li * height, charEnd - charStart, height);
+      this.context.fillRect(charStart, this.offsetY + (li * height), charEnd - charStart, height);
     }
   }
 
   selectStart(point) {
-    this.selectionStart = this.indexOf(point);
+    this.selectionStart = this.indexOf(point, 'selectStart');
     this.selectionEnd = null;
   }
 
   selectEnd(point) {
-    this.selectionEnd = this.indexOf(point);
+    this.selectionEnd = this.indexOf(point, 'selectEnd');
     this.cursorPoint = { x: this.selectionEnd.x, y: this.selectionEnd.y + 1};
     this.updateText(false);
   }
@@ -711,7 +710,7 @@ export class EditableText extends Text {
     if (x !== 0) {
       let point;
       if (!withShift && this.selection && this.selection.start.ci < this.selection.end.ci) {
-        // 有选中的时候，纯移动先移到开头/末尾
+        // 有选中的时候，键盘移动先把光标移到选中区域的开头/末尾
         const sel = this.selection[x > 0 ? 'end' : 'start'];
         point = { x: sel.x, y: sel.y + 1 };
       } else if (!withCtrl && x < 0 && this.selectionEnd.charIdx <= 0) {
@@ -746,7 +745,7 @@ export class EditableText extends Text {
 
       if (point) {
         this.cursorPoint = point;
-        this.selectionEnd = this.indexOf(point);
+        this.selectionEnd = this.indexOf(point, 'selectMove.x');
       }
     } else {
       let i = this.selectionEnd.lineIdx + (y > 0 ? 1 : -1);
@@ -755,7 +754,7 @@ export class EditableText extends Text {
         i = y > 0 ? this.chars.length : 0; 
         pX = y > 0 ? this.width : 0;
       }
-      this.selectionEnd = this.indexOf({ x: pX, y: this.lineHeight * i + 1 });
+      this.selectionEnd = this.indexOf({ x: pX, y: this.offsetY + this.lineHeight * i + 1 }, 'selectMove.y');
     }
 
     // cursor move, without shift
@@ -768,8 +767,9 @@ export class EditableText extends Text {
     return this.chars[lineIdx].filter(x => x.char != '\n');
   }
 
-  indexOf(point) {
-    const lineIdx = Math.max(0, Math.min(this.chars.length - 1, Math.floor(point.y / this.lineHeight)));
+  indexOf(point, debug) {
+    const lineIdx = Math.max(0, Math.min(this.chars.length - 1, Math.floor((point.y - this.offsetY) / this.lineHeight)));
+    // console.log({otop: this.offsetY, lineIdx}, point, debug);
     let charIdx = 0;
     let ci = this.chars[lineIdx][0] ? this.chars[lineIdx][0].ci : 0;
     let x = this.chars[lineIdx][0] ? this.chars[lineIdx][0].left : 0;
@@ -781,7 +781,7 @@ export class EditableText extends Text {
       ci = char.ci + 1;
     }
     const height = this.lineHeight;
-    return { lineIdx, charIdx, ci, x, y: lineIdx * height, height };
+    return { lineIdx, charIdx, ci, x, y: this.offsetY + (lineIdx * height), height };
   }
 
   cursor(ci) {
@@ -796,8 +796,13 @@ export class EditableText extends Text {
       key = 'right';
     }
 
-    // update
-    this.selectionEnd = this.indexOf({ x: char[key], y: char.top + 1 });
+    // todo: 如果不更新selectionEnd，会导致删除/编辑后的光标位置有问题
+    const end = this.indexOf({ x: char[key], y: char.top + 1 }, 'cursor');
+    if (end.ci === this.selectionEnd.ci && end.x !== this.selectionEnd.x) {
+      // 强制换行会带来不一致的情况（光标移动到上一行的结尾时，光标会出现在下一行开头），需要更新
+      this.cursorPoint = { x: end.x, y: end.y };
+    }
+    this.selectionEnd = end;
     if (ci === undefined) return this.selectionEnd; // get
     this.selectionStart = this.selectionEnd; // set
   }

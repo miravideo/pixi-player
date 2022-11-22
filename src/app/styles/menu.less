@@ -1,0 +1,75 @@
+@import "./global.less";
+
+.mirae-menu[mira-editor-el] {
+  @lineColor: #393943;
+  @bgColor: #1A191B;
+
+  margin: 0px;
+  padding: 0px;
+  display: block;
+  position: absolute;
+  overflow: hidden;
+  pointer-events: auto;
+  background: @bgColor;
+  border: 1px solid @lineColor;
+  border-radius: 3px;
+  z-index: 199;
+  opacity: 0;
+  transition-property: opacity, height;
+  transition-duration: @trans;
+  -webkit-user-select: none;
+  user-select: none;
+
+  * {
+    margin: 0px;
+    padding: 0px;
+  }
+
+  .mirae-menu-line {
+    height: 1px;
+    width: 100%;
+    background: @lineColor;
+  }
+
+  .mirae-menu-item {
+    display: flex;
+    min-width: 130px;
+    padding: 8px 12px;
+    align-items: center;
+    justify-content: center;
+    color: #FFF;
+
+    &.mirae-menu-item-disable {
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    &:hover {
+      background: #3D3D48;
+    }
+
+    .mirae-menu-item-title {
+      flex-grow: 1;
+      font-size: 12px;
+      margin-right: 15px;
+    }
+
+    .mirae-menu-item-keys {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      div {
+        margin-left: 3px;
+        color: #FFF;
+        font-size: 12px;
+        min-width: 18px;
+        height: 18px;
+        background: #3e3e48;
+        border-radius: 2px;
+        line-height: 18px;
+        text-align: center;
+      }
+    }
+  }
+}

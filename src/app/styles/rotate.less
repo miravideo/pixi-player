@@ -1,0 +1,44 @@
+@import "./global.less";
+
+.mirae-rotate.handle[mira-editor-el] {
+  .controlBox();
+  position: relative;
+  z-index: 3;
+
+  &:after {
+    width: @btnSize;
+    height: @btnSize;
+    .control(@btnSize*0.5);
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath fill='currentColor' d='M15.25 18.48V15a.75.75 0 1 0-1.5 0v4c0 .97.78 1.75 1.75 1.75h4a.75.75 0 1 0 0-1.5h-2.6a8.75 8.75 0 0 0-2.07-15.53.75.75 0 1 0-.49 1.42 7.25 7.25 0 0 1 .91 13.34zM8.75 5.52V9a.75.75 0 0 0 1.5 0V5c0-.97-.78-1.75-1.75-1.75h-4a.75.75 0 0 0 0 1.5h2.6a8.75 8.75 0 0 0 2.18 15.57.75.75 0 0 0 .47-1.43 7.25 7.25 0 0 1-1-13.37z'/%3E%3C/svg%3E");
+  }
+
+}
+
+.ra(@trans) {
+  cursor: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='24' height='24'%3E%3Cdefs%3E%3Cfilter id='a' width='266.7%25' height='156.2%25' x='-75%25' y='-21.9%25' filterUnits='objectBoundingBox'%3E%3CfeOffset dy='1' in='SourceAlpha' result='shadowOffsetOuter1'/%3E%3CfeGaussianBlur in='shadowOffsetOuter1' result='shadowBlurOuter1' stdDeviation='1'/%3E%3CfeColorMatrix in='shadowBlurOuter1' result='shadowMatrixOuter1' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0'/%3E%3CfeMerge%3E%3CfeMergeNode in='shadowMatrixOuter1'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3Cpath id='b' d='M1.67 12.67a7.7 7.7 0 0 0 0-9.34L0 5V0h5L3.24 1.76a9.9 9.9 0 0 1 0 12.48L5 16H0v-5l1.67 1.67z'/%3E%3C/defs%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cpath d='M0 24V0h24v24z'/%3E%3Cg fill-rule='nonzero' filter='url(%23a)' transform='@{trans}'%3E%3Cuse fill='%23000' fill-rule='evenodd' xlink:href='%23b'/%3E%3Cpath stroke='%23FFF' d='M1.6 11.9a7.21 7.21 0 0 0 0-7.8L-.5 6.2V-.5h6.7L3.9 1.8a10.4 10.4 0 0 1 0 12.4l2.3 2.3H-.5V9.8l2.1 2.1z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") 12 12, auto;
+}
+
+.mirae-rot-cursor[rr="0"] { .ra("rotate(-90 9.25 5.25)") }
+.mirae-rot-cursor[rr="1"] { .ra("rotate(-75 9.972 3.863)") }
+.mirae-rot-cursor[rr="2"] { .ra("rotate(-60 10.84 1.756)") }
+.mirae-rot-cursor[rr="3"] { .ra("rotate(-45 11.972 -1.716)") }
+.mirae-rot-cursor[rr="4"] { .ra("rotate(-30 14.508 -7.572)") }
+.mirae-rot-cursor[rr="5"] { .ra("rotate(-15 21.933 -22.997)") }
+.mirae-rot-cursor[rr="6"] { .ra("translate(9.5 3.5)") }
+.mirae-rot-cursor[rr="7"] { .ra("rotate(15 -7.985 46.77)") }
+.mirae-rot-cursor[rr="8"] { .ra("rotate(30 -.415 27.57)") }
+.mirae-rot-cursor[rr="9"] { .ra("rotate(45 2.32 21.713)") }
+.mirae-rot-cursor[rr="10"] { .ra("rotate(60 3.916 18.243)") }
+.mirae-rot-cursor[rr="11"] { .ra("rotate(75 4.762 16.135)") }
+.mirae-rot-cursor[rr="12"] { .ra("rotate(90 5.25 14.75)") }
+.mirae-rot-cursor[rr="13"] { .ra("rotate(105 5.84 13.617)") }
+.mirae-rot-cursor[rr="14"] { .ra("rotate(120 6.084 12.666)") }
+.mirae-rot-cursor[rr="15"] { .ra("rotate(135 6.317 12.01)") }
+.mirae-rot-cursor[rr="16"] { .ra("rotate(150 6.754 11.325)") }
+.mirae-rot-cursor[rr="17"] { .ra("rotate(165 7.06 10.653)") }
+.mirae-rot-cursor[rr="18"] { .ra("rotate(-180 7.25 10)") }
+.mirae-rot-cursor[rr="19"] { .ra("rotate(-165 7.597 9.43)") }
+.mirae-rot-cursor[rr="20"] { .ra("rotate(-150 7.825 8.672)") }
+.mirae-rot-cursor[rr="21"] { .ra("rotate(-135 7.974 7.99)") }
+.mirae-rot-cursor[rr="22"] { .ra("rotate(-120 8.393 7.332)") }
+.mirae-rot-cursor[rr="23"] { .ra("rotate(-105 8.83 6.441)") }

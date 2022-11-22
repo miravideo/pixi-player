@@ -2,15 +2,22 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { App } from "./app/index";
 import Store from "./app/store";
+import { History, Record } from "./app/history";
 import Utils from "./app/utils";
-
-const VERSION = '$VERSION';
+import Queue from "./util/queue";
+import Editor from "./app/editor";
 
 class PlayerUI {
   constructor(container, options) {
-    this.version = VERSION;
     this.container = container;
+
+    // init history
+    this._queue = new Queue();
+    this._history = new History();
+    this._changed = false;
+
     this.load(options);
+    if (options.editable) this.editable(true);
 
     // observe resize
     this.resizeObserver = new ResizeObserver((entries) => {
@@ -43,8 +50,16 @@ class PlayerUI {
     this.store.load();
   }
 
+  toast(msg, durationInMs) {
+    this.store.toast(msg, durationInMs);
+  }
+
   get core() {
     return this.store.player;
+  }
+
+  get scale() {
+    return this.store.scale;
   }
 
   resize(width, height) {
@@ -60,15 +75,87 @@ class PlayerUI {
   }
 
   on(event, callback) {
-    this.store.player.on(event, callback);
+    this.core.on(event, callback);
   }
 
   off(event, callback) {
-    this.store.player.off(event, callback);
+    this.core.off(event, callback);
   }
 
   once(event, callback) {
-    this.store.player.once(event, callback);
+    this.core.once(event, callback);
+  }
+
+  get options() {
+    return this.store.opt;
+  }
+
+  get history() {
+    return this._history;
+  }
+
+  async _queuedUpdate(update) {
+    return this._queue.enqueue(async () => {
+      if (!this.history) return;
+      const res = await update();
+      this._changed = res.changed || this._changed;
+      // 如果queue里还有更新任务，就等到最后一起再重绘
+      if (!this._queue.length && this._changed) {
+        this._changed = false;
+        await this.core.render();
+      }
+      return res;
+    });
+  }
+
+  async update(nodes, attrs, senderId) {
+    return this._queuedUpdate(async () => {
+      let record = new Record(senderId);
+      const changed = await record.update(nodes, attrs);
+      // return the last record merged this one
+      record = this.history.append(record);
+      // console.log('update', {record, changed});
+      return {record, changed};
+    });
+  }
+
+  async redo(n) {
+    return this._queuedUpdate(async () => {
+      const records = await this.history.redo(n);
+      return { records, changed: records.length > 0 };
+    });
+  }
+
+  async undo(n) {
+    return this._queuedUpdate(async () => {
+      const records = await this.history.undo(n);
+      return { records, changed: records.length > 0 };
+    });
+  }
+
+  editable(enable) {
+    this.store.editable(enable);
+    if (!this.editor) this.editor = new Editor(this);
+  }
+
+  enableKeyboard(enable) {
+    this.store.opt.enableKeyboard = enable;
+  }
+
+  getNodeById(id) {
+    return this.core.getNodeById(id);
+  }
+
+  get version() {
+    return this.store.version;
+  }
+
+  get editorContainer() {
+    return this.store.editorRef.current;
+  }
+
+  get canvas() {
+    return this.store.canvasRef.current;
   }
 
   destroy() {
@@ -78,6 +165,12 @@ class PlayerUI {
     this.store = null;
     if (this.container) this.container.innerHTML = '';
     this.container = null;
+    if (this._history) this._history.destroy();
+    this._history = null;
+    if (this._queue) this._queue.destroy();
+    this._queue = null;
+    if (this.editor) this.editor.destroy();
+    this.editor = null;
   }
 }
 
@@ -87,6 +180,5 @@ if (!PixiPlayer['init']) {
     return new PlayerUI(container, options);
   }
 }
-PixiPlayer['version'] = VERSION;
 
 export default PixiPlayer

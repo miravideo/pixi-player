@@ -12,6 +12,11 @@ const ViewNode = {
       .after(function (args, view) {
         return this._vn_updateViewAttr(view);
       });
+    PluginUtil
+      .wrap(obj.prototype, 'updateView')
+      .after(function (args, view) {
+        return this._vn_updateViewAttr(view);
+      });
   },
   _vn_updateViewAttr(view) {
     if (!view || !view.attr) return;

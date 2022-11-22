@@ -1,0 +1,46 @@
+@import "./global.less";
+
+.mirae-constraint[mira-editor-el] {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: transparent!important;
+  z-index: 9;
+  text-align: center;
+}
+
+.mirae-line[mira-editor-el] {
+  pointer-events: none;
+  box-sizing: border-box;
+  width: 0px;
+  height: 0px;
+  left: 0;
+  top: 0;
+  transform-origin: center;
+  transform: translate(var(--x), var(--y));
+
+  &.mirae-line-x {
+    width: 1px;
+    height: var(--len);
+    border-left: 1px dashed var(--miraeRefLineColor);
+    &.mirae-line-solid {
+      border-left: 1px solid var(--miraeRefLineColor);
+    }
+  }
+
+  &.mirae-line-y {
+    height: 1px;
+    width: var(--len);
+    border-top: 1px dashed var(--miraeRefLineColor);
+    &.mirae-line-solid {
+      border-top: 1px solid var(--miraeRefLineColor);
+    }
+  }
+
+  &.mirae-line-canvas {
+    width: var(--width);
+    height: var(--height);
+    border: 1px solid var(--miraeRefLineColor);
+  }
+}
+

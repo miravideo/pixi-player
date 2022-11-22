@@ -1,0 +1,93 @@
+@import './base.less';
+@import './global.less';
+
+.mirae-box[mira-editor-el] {
+  border: 2px solid var(--miraeBorderColor);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(var(--x), var(--y)) rotate(var(--rotate)); /* <- order matters!! */
+  transition-duration: 0;
+
+  &.mirae-box-none[mira-editor-el] {
+    border: 0px;
+  }
+
+  &.editMode {
+    border: 2px dashed var(--miraeBorderColor) !important;
+  }
+
+  .mira-editor-group[mira-editor-el] {
+    @size: 0px;
+    width: @size;
+    height: @size;
+    border-radius: @size*0.5;
+    transform-origin: 50% 50%;
+    // background-color: rgba(0,80,0,0.7);
+  }
+
+  &.group {
+    border-style: dashed!important;
+  }
+
+  &.copy {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  &.ani {
+    transition-duration: @trans;
+    transition-property: width, height, transform;
+  }
+
+  * {
+    pointer-events: none;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  &.mirae-selected {
+    border-color: var(--miraeSelBorderColor);
+    z-index: 2!important;
+  }
+
+  .mirae-box-handles[mira-editor-el] {
+    border: 0;
+    position: relative;
+    /*background: #000;*/
+    display: flex;
+    width: @ctlSize*4;
+    height: @ctlSize;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  @pos: -50%;
+  @margin: -1.5*@ctlSize;
+  .side {
+    transform: rotate(90deg);
+  }
+
+  .mirae-box-handles.top {
+    top: @pos;
+    margin-top: @margin;
+  }
+
+  .mirae-box-handles.bottom {
+    bottom: @pos;
+    margin-bottom: @margin;
+  }
+
+  .mirae-box-handles.left {
+    left: @pos;
+    margin-left: @margin;
+    .side();
+  }
+
+  .mirae-box-handles.right {
+    right: @pos;
+    margin-right: @margin;
+    .side();
+  }
+}

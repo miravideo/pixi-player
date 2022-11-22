@@ -1,0 +1,53 @@
+@import "./global.less";
+
+*[mira-editor-el] {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  // --miraeBorderColor: #0CC;
+  // --miraeSelBorderColor: #0CC;
+  // --miraeRefLineColor: #C0C;
+
+  .hide {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    cursor: default !important;
+    &:after {
+      opacity: 0 !important;
+      .transition();
+    }
+  }
+}
+
+.mira-editor[mira-editor-el] {
+  position: relative;
+  user-select: none;
+}
+
+.mirae-debug-box[mira-editor-el] {
+  border: 1px dotted #C00!important;
+}
+
+.mirae-center-cross[mira-editor-el] {
+  margin: 0;
+
+  &:before {
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 1px;
+  }
+
+  &:after {
+    top: 50%;
+    left: 0; right: 0;
+    height: 1px;
+  }
+
+  &:before, &:after {
+    content: '';
+    position: absolute;
+    background: red;
+  }
+}
