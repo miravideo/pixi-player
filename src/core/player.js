@@ -10,6 +10,8 @@ import AudioUtil from '../util/audio';
 import VideoSource from '../util/video-source';
 import STATIC from './static';
 
+const FFT_SIZE = 4096;
+
 class Player extends EventEmitter {
   constructor(opts={}) {
     super();
@@ -21,7 +23,7 @@ class Player extends EventEmitter {
     this.numberOfChannels = numberOfChannels;
     this.volume = volume;
     this._timer = 0;
-    this.audioAnalyser = new AudioUtil.Analyser();
+    this.audioAnalyser = new AudioUtil.Analyser(FFT_SIZE);
     this._audioAnalyserCache = {};
   }
 
@@ -269,15 +271,14 @@ class Player extends EventEmitter {
     return reg ? nodes : nodes[0];
   }
 
-  async audioAnalyserProcess() {
-    const time = this.currentTime;
-    if (!this.playingAudioSource || this.audioAnalyser._time === time) return
+  async audioAnalyserProcess(time) {
+    if (this.audioAnalyser._time === time) return
     if (!this._audioAnalyserCache[time]) {
       this._audioAnalyserCache[time] = new Promise(async (resolve) => {
         // todo 性能优化，搬到webWorker里
-        const audioData = await this.getFrameAudioData(time, {size: 1024});
+        const audioData = await this.getFrameAudioData(time, {size: Math.round(1 / this.fps * this.audioSampleRate)});
         if (audioData) {
-          this.audioAnalyser.process([audioData.getChannelData(0)])
+          this.audioAnalyser.process([audioData.getChannelData(0), audioData.getChannelData(1)])
           this.audioAnalyser._time = time;
         }
         resolve();

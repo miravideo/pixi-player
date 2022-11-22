@@ -208,7 +208,9 @@ class Clip extends EventEmitter {
     const view = this.getView(absTime, type);
     if (!view) return;
     if (this.onDraw(absTime)) {
-      if (this.getConf('enableAudioAnalyser')) await this.player.audioAnalyserProcess();
+      if (this.getConf('enableAudioAnalyser')) {
+        await this.player.audioAnalyserProcess(absTime);
+      }
       // apply animation
       const attr = this.animationAttr(absTime);
       view.animationAttrChange = JSON.stringify(attr) !== JSON.stringify(view.animationAttr);
@@ -579,8 +581,20 @@ class Clip extends EventEmitter {
       const keyFrameAttr = kf.renderAttr(nodeTime, this);
       Object.assign(attr, keyFrameAttr);
     }
-
-    // todo: amotion...
+    const aMotion = this.getConf('amotion')
+    if (this.getConf('enableAudioAnalyser') && aMotion) {
+      if (aMotion instanceof Array) {
+        for (const item of aMotion) {
+          const func = (typeof(this[item.funcName]) === 'function') ? this[item.funcName] : this.defaultAmotionAttr
+          const aMotionAttr = func.call(this, item)
+          Object.assign(attr, aMotionAttr);
+        }
+      } else {
+        const func = (typeof(this[aMotion.funcName]) === 'function') ? this[aMotion.funcName] : this.defaultAmotionAttr
+        const aMotionAttr = func.call(this, aMotion)
+        Object.assign(attr, aMotionAttr);
+      }
+    }
     return attr;
   }
 
