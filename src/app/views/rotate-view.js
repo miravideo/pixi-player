@@ -3,7 +3,7 @@
 require('../styles/rotate.less');
 const MiraEditorMove = require('./move-view');
 const { deg } = require('../utils/math');
-import PluginUtil from '../../util/plugin';
+const { wrap } = require('../utils/plugin');
 
 class MiraEditorRotate extends MiraEditorMove {
   static TAG = 'mira-editor-rotate';
@@ -19,7 +19,7 @@ class MiraEditorRotate extends MiraEditorMove {
     super.setOpts(opts);
     const box = this.box();
     if (!box) return;
-    this.wrapper = PluginUtil.wrap(box, 'setRotate').after((_, r) => this.setRotate(box.rotation) && r);
+    this.wrapper = wrap(box, 'setRotate').after((_, r) => this.setRotate(box.rotation) && r);
     return this.addClass(this.constructor.CURSOR_CLASS).setRotate(box.rotation);
   }
 

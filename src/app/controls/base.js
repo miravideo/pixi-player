@@ -3,11 +3,10 @@
 const { zip } = require('../utils/data');
 const EventEmitter = require('../utils/event');
 const { sum, round } = require('../utils/math');
+const { wrap } = require('../utils/plugin');
 const { uuid } = require('../utils/data');
 const Point = require('../utils/point');
 const { CHANGING, TYPE_PLACEHOLDER, OP_CLEAR_CACHE } = require('../utils/static');
-
-import PluginUtil from '../../util/plugin';
 
 class BaseControl extends EventEmitter {
   static type = "base";
@@ -46,7 +45,7 @@ class BaseControl extends EventEmitter {
   }
 
   wrap(obj, funcName) {
-    const wrapper = PluginUtil.wrap(obj, funcName);
+    const wrapper = wrap(obj, funcName);
     this._wrappers.push(wrapper);
     return wrapper;
   }
