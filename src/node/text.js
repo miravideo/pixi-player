@@ -85,13 +85,15 @@ class Text extends Display {
     return super.px(val);
   }
 
-  vu(key, val, unitReferValue) {
+  vu(key, val) {
+    if (typeof(val) === 'object') return super.vu(key, val);
     if (typeof(val) === 'string' && val.endsWith('%')) return val;
     const px = this.px(val);
+    const unitReferValue = this.getConf(key, false);
     if (typeof(unitReferValue) === 'string' && unitReferValue.endsWith('%') && !isNaN(px)) {
       return `${Math.round(100 * (px / this.fontSize))}%`;
     } else {
-      return super.vu(key, val, unitReferValue);
+      return super.vu(key, val);
     }
   }
 

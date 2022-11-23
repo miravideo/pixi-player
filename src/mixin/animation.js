@@ -49,11 +49,11 @@ const AnimationNode = {
    * @returns {{value: number, key: string, relative: boolean}}
    */
   toAbs(key, newValue, _attr=null) {
-    let oriValue = (_attr && _attr[key] !== undefined) ? _attr[key]: this.getConf(key);
+    let oriValue = (_attr && _attr[key] !== undefined) ? _attr[key]: this.getRawConf(key);
     let result, relative = false;
     if (key.includes('d-')) {
       key = key.replace('d-', '');
-      let oriValue = (_attr && _attr[key] !== undefined) ? _attr[key]: this.getConf(key);
+      let oriValue = (_attr && _attr[key] !== undefined) ? _attr[key]: this.getRawConf(key);
       // relative用来标识是否为相对值，处理相对值和绝对值同时存在的情况
       relative = true;
       if (KeyFrames.D_LIST.includes(key)) {

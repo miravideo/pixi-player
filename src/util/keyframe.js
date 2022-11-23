@@ -46,8 +46,16 @@ class KeyFrames {
    * @returns {KeyFrame}
    */
   keyFrame(key, value, index, time, func) {
-    const from = this.conf[index - 1] && this.conf[index - 1][key];
-    const conf = {startTime: this.conf[index - 1]?.time, endTime: time, to: value, key, from, func};
+    let from = undefined, startTime = 0;
+    for (let i = index - 1; i >= 0; i--) {
+      // 一直找到上一个设置它的值
+      if (this.conf[i] && this.conf[i][key] !== undefined) {
+        from = this.conf[i][key];
+        startTime = this.conf[i].time;
+        break;
+      }
+    }
+    const conf = {startTime, endTime: time, to: value, key, from, func};
     return new KeyFrame(conf)
   }
 

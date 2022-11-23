@@ -278,7 +278,16 @@ class Clip extends EventEmitter {
     return DEFAULT_CONF[key];
   }
 
-  getConf(key, autounit=true) {
+  getConf(key, autounit=true, absTime=null) {
+    if (this.keyframe?.keyFrames[key]) { // has keyframe value
+      absTime = absTime || this.player.currentTime;
+      const keyFrameAttr = this.keyframe.renderAttr(absTime - this.absStartTime, this);
+      return keyFrameAttr[key];
+    }
+    return this.getRawConf(key, autounit, absTime);
+  }
+
+  getRawConf(key, autounit=true, absTime=null) {
     if (!key || typeof(key) !== 'string' || !this.conf) return undefined;
     autounit = !this.forceNoUnit(key) && autounit;
 
@@ -303,13 +312,15 @@ class Clip extends EventEmitter {
     return autounit ? this.px(val) : val;
   }
 
-  setConf(key, value, autounit=true) {
+  setConf(key, value, autounit=true, absTime=null) {
     if (!key || typeof(key) !== 'string') throw new Error(`Invalid key: ${key}`);
-    autounit = !this.forceNoUnit(key) && autounit;
-    let obj = this.conf;
-    if (autounit) {
-      value = this.vu(key, value, this.getConf(key, false));
+    if (this.keyframe?.keyFrames[key]) {
+      // has keyframe value
+      return this.setKeyFrame({ [key]: value }, absTime || this.player.currentTime);
     }
+    autounit = !this.forceNoUnit(key) && autounit;
+    if (autounit) value = this.vu(key, value);
+    let obj = this.conf;
     if (!key.includes('.')) return obj[key] = value;
     let ks = key.split('.');
     for (let i = 0; i < ks.length; i++) {
@@ -334,24 +345,24 @@ class Clip extends EventEmitter {
     ];
   }
 
-  forceUnit(key) {
-    return ['x', 'y', 'width', 'height'].includes(key);
-  }
-
   forceNoUnit(key) {
     return ['refId', 'id'].includes(key);
   }
 
-  vu(key, val, unitReferValue) {
-    let [inum, unit] = this.deunit(unitReferValue === undefined ? val : unitReferValue);
-    if (!unit) {
-      if (this.forceUnit(key)) unit = 'rpx'; // todo: 强制rpx
-      else return val;
-    }
+  vu(key, val) {
     if (typeof(val) === 'object') {
-      return Utils.dmap(val, x => this.enunit(this.px(x), unit));
+      return Utils.dmap(val, (v, k, ks) => {
+        // console.log({v, k, ks});
+        return this.vu(ks.join('.'), v);
+      }, [key]);
     } else {
-      return this.enunit(this.px(val), unit);
+      let [vnum, unit] = this.deunit(val);
+      if (!unit) {
+        // 若无单位，取当前设置的单位
+        const [_, runit] = this.deunit(this.getConf(key, false));
+        unit = runit;
+      }
+      return unit ? this.enunit(vnum, unit) : val;
     }
   }
 
@@ -393,7 +404,7 @@ class Clip extends EventEmitter {
       const inum = unit(lower_data, ut[0], ut[1], ut[2]);
       if (inum !== null) return [inum, ut[0]];
     }
-    return [data, null];
+    return [!isNaN(data) ? Number(data) : data, null];
   }
 
   /**
@@ -645,9 +656,41 @@ class Clip extends EventEmitter {
 
   get keyframe() {
     if (this._keyframe !== undefined) return this._keyframe;
-    const kfs = this.getConf('keyframes');
-    this._keyframe = kfs ? new KeyFrames(kfs) : null;
+    const kfs = this.conf.keyframes;
+    this._keyframe = kfs ? new KeyFrames(this.px(kfs)) : null;
     return this._keyframe;
+  }
+
+  setKeyFrame(attrs, absTime) {
+    if (absTime === undefined) absTime = this.player.currentTime;
+    const time = (absTime - this.absStartTime).toFixed(2); // time: nodeTime
+    let kfs = this.getConf('keyframes', false);
+    if (kfs && !Array.isArray(kfs)) kfs = [kfs];
+    else if (!kfs) kfs = [];
+
+    const _attrs = {};
+    for (const [key, val] of Object.entries(attrs)) {
+      // remove exist keyframe set
+      const kf = kfs.find(kf => kf.time == time && kf[key] !== undefined);
+      if (kf) delete kf[key];
+      // set value
+      if (val !== undefined) _attrs[key] = this.vu(key, val);
+    }
+
+    // filter empty keyframe
+    kfs = kfs.filter(kf => Object.keys(kf).length > 1);
+
+    // add new keyframe
+    if (Object.keys(_attrs).length > 0) kfs.push({ time, ..._attrs });
+
+    // set conf
+    if (kfs.length > 0) this.conf.keyframes = kfs;
+    else this.conf.keyframes = undefined;
+
+    // update _keyframe
+    if (this._keyframe) this._keyframe.destroy();
+    this._keyframe = kfs.length > 0 ? new KeyFrames(this.px(kfs)) : null;
+    return kfs;
   }
 
   volume(absTime) {
