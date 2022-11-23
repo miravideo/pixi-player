@@ -38,20 +38,19 @@ export class EditableTextMetrics extends TextMetrics {
       lines = text.split(/(?:\r\n|\r|\n)/).map(line => `${line}\n`);
     }
 
+    const chars = Array.from(text);
+    const before = chars.length;
     let after = 0;
-    // 最后会多一个\n，不去掉，但校验的时候不算
-    const lastLine = lines[lines.length - 1];
-    if (lastLine.endsWith('\n')) {
-      after = -1;
-      //lines[lines.length - 1] = lastLine.substring(0, lastLine.length - 1);
+    lines.map((l) => after += Array.from(l).length);
+    // 最后如果多一个\n，校验的时候减掉，但不去掉
+    if (lines[lines.length - 1].endsWith('\n')) { //
+      after -= 1;
     }
 
-    const before = Array.from(text).length;
-    lines.map((l) => after += Array.from(l).length);
     if (before !== after) {
-      console.error('text parse err!!!', {before, after}, Array.from(text), lines);
+      console.error('text parse err!!!', {before, after}, chars, lines);
     } else {
-      // console.log('text parse ok!!!', {before, after}, Array.from(text), lines);
+      // console.log('text parse ok!!!', {before, after}, chars, lines);
     }
 
     const lineWidths = new Array(lines.length);
@@ -127,7 +126,7 @@ export class EditableTextMetrics extends TextMetrics {
     for (let i = 0; i < tokens.length; i++) {
       // get the word, space or newlineChar
       let token = tokens[i];
-      // console.log('-----token', {i, token});
+      // console.log('-----token', {i, token, line});
 
       // if word is a new line
       if (TextMetrics.isNewline(token)) {
@@ -314,8 +313,9 @@ export class EditableTextMetrics extends TextMetrics {
       }
     }
 
-    // console.log('line', line);
-    if (line.length > 0) lines.push(EditableTextMetrics.addLine(line, 'T6'));
+    // console.log('line', line, line.length);
+    // if (line.length > 0) // 这样会把最后一个\n过滤掉
+    lines.push(EditableTextMetrics.addLine(line, 'T6'));
 
     // 把单个\n跟上一行结尾无\n的合并
     for (let i = 0; i < lines.length - 1; i++) {
