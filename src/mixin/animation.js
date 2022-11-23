@@ -20,7 +20,27 @@ const AnimationNode = {
     }
     return attr
   },
-
+  defaultAmotionAttr(args) {
+    const {key, minFrequency=0, maxFrequency=1024, amp = 1, threshold = 0, dataType, smooth=0} = args;
+    if (!key || !dataType || (maxFrequency <= minFrequency)) return
+    if (!this.lastAudioData) {
+      this.lastAudioData = {}
+    }
+    let data;
+    if (minFrequency || maxFrequency) {
+      const result = this.player.audioAnalyser.slice(minFrequency, maxFrequency);
+      if (result) data = result[dataType]
+    } else {
+      data = this.player.audioAnalyser[dataType];
+    }
+    if (!data) return
+    if (data >= threshold) {
+      const {key:_key, value} = this.toAbs(key, amp * data)
+      const newValue = value * (1 - smooth) + (this.lastAudioData[_key] || 0) * smooth;
+      this.lastAudioData[_key] = newValue;
+      return {[_key]: newValue}
+    }
+  },
   /**
    * 用于将conf中d-开头的相对值转为绝对值
    * @param key

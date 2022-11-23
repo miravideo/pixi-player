@@ -17,11 +17,11 @@ class Material {
 
   async loadAudioBuffer(onprogress) {
     if (!this.player) return;
-    this.audioBuffer = await AudioUtil.getBuffer(this.src, 
+    this.audioBuffer = await AudioUtil.getBuffer(this.src,
       this.player.id, this.player.audioSampleRate, onprogress);
     if (!this.audioBuffer) return;
     this.ach0 = this.audioBuffer.getChannelData(0);
-    this.ach1 = this.audioBuffer.numberOfChannels >= 2 ? this.audioBuffer.getChannelData(1) : ch0;
+    this.ach1 = this.audioBuffer.numberOfChannels >= 2 ? this.audioBuffer.getChannelData(1) : this.ach0;
   }
 
   get src() {

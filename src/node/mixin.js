@@ -28,8 +28,24 @@ class Mixin extends Display {
     }
   }
 
+  defaultVal(key) {
+    let value;
+    if (this.defaultConf) {
+      value = this.defaultConf(key)
+    }
+    return (value === undefined) ? super.defaultVal(key) : value;
+  }
+
   get material() {
     return this.node?.material || this;
+  }
+
+  get width() {
+    return Math.floor(this.getConf('width'))
+  }
+
+  get height() {
+    return Math.floor(this.getConf('height'))
   }
 
   createView() {
