@@ -113,7 +113,7 @@ class MP4Decoder {
           }
         }
         // console.log('extractNext', {start: item.start, end: item.end });
-        this.file.setExtractionOptions(this.vtrackId, 'video', { nbSamples: 100 });
+        this.file.setExtractionOptions(this.vtrackId, 'video', { nbSamples: 1000 });
       } else {
         this.file.setExtractionOptions(this.atrackId, 'audio', { nbSamples: 100 });
       }
@@ -151,9 +151,9 @@ class MP4Decoder {
         const ab = new ArrayBuffer(frame.allocationSize(opt));
         frame.copyTo(ab, opt);
         const bitLen = format.includes('32') ? 32 : (format.includes('16') ? 16 : 8);
-        const mixData = bitLen == 32 ? new Uint32Array(ab) : (bitLen == 16 ? new Uint16Array(ab) : new Uint8Array(ab)); 
+        const mixData = bitLen == 32 ? new Uint32Array(ab) : (bitLen == 16 ? new Uint16Array(ab) : new Uint8Array(ab));
         for (let c = 0; c < Math.min(numberOfChannels, frame.numberOfChannels); c++) {
-          const chData = bitLen == 32 ? new Uint32Array(frame.numberOfFrames) : (bitLen == 16 ? new Uint16Array(frame.numberOfFrames) : new Uint8Array(frame.numberOfFrames)); 
+          const chData = bitLen == 32 ? new Uint32Array(frame.numberOfFrames) : (bitLen == 16 ? new Uint16Array(frame.numberOfFrames) : new Uint8Array(frame.numberOfFrames));
           for (let i = 0; i < chData.length; i++) {
             chData[i] = mixData[(i * frame.numberOfChannels) + c];
           }
@@ -249,19 +249,19 @@ class MP4Decoder {
       }
 
       this.frames = data.map(d => {
-        return { 
-          data: d.buffer, 
-          t: this.frames[0].t, 
+        return {
+          data: d.buffer,
+          t: this.frames[0].t,
           sampleRate: this.meta.sampleRate
         };
       });
     }
 
     resolve(this.frames);
-    // console.log('worker extract cost:', { type, 
-    //   from: this.frames[0].t.toFixed(3), 
-    //   to: this.frames[this.frames.length - 1].t.toFixed(3), 
-    //   len: this.frames.length, 
+    // console.log('worker extract cost:', { type,
+    //   from: this.frames[0].t.toFixed(3),
+    //   to: this.frames[this.frames.length - 1].t.toFixed(3),
+    //   len: this.frames.length,
     //   cost_ms: Math.round(performance.now() - this._extractStart)
     // });
     // console.log('extract end', type, reqId);
@@ -308,8 +308,8 @@ class MP4Decoder {
       }));
     }
 
-    // if (type === 'video') console.log('samples', { 
-    //   len: samples.length, 
+    // if (type === 'video') console.log('samples', {
+    //   len: samples.length,
     //   from: samples[0].cts / samples[0].timescale,
     //   to: lastTime,
     //   kfs: JSON.stringify(samples.filter(s => s.is_sync).map(sample => sample.cts / sample.timescale))
@@ -357,7 +357,7 @@ class MP4Decoder {
         sampleSize: atrack.audio.sample_size,
       }
       this.audioDecoder.configure(this.aconfig);
-      this.atrackId = atrack.id;  
+      this.atrackId = atrack.id;
     } else {
       this.atrackId = undefined;
       this.aconfig = { sampleRate: 0, numberOfChannels: 0, sampleSize: 0 };
@@ -405,7 +405,7 @@ class MP4Decoder {
     // return;
 
     const gl = this.ctx = this.canvas.getContext('webgl2', {
-      alpha: false, desynchronized: true, antialias: false, 
+      alpha: false, desynchronized: true, antialias: false,
       powerPreference: "high-performance",
     });
     const vertexShaderSource = `
@@ -490,7 +490,7 @@ class MP4Decoder {
     }
     throw "avcC or hvcC not found";
   }
-}  
+}
 
 let decoder = null;
 self.addEventListener('message', async (e) => {
@@ -499,7 +499,7 @@ self.addEventListener('message', async (e) => {
 
   } else if (e.data.method === 'extract') {
     const frames = await decoder.extract(e.data);
-    self.postMessage({ method: 'extract', frames, reqId: e.data.reqId }, 
+    self.postMessage({ method: 'extract', frames, reqId: e.data.reqId },
       [ ...frames.map(f => f.data) ]);
 
   } else if (e.data.method === '') {

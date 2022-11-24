@@ -114,13 +114,19 @@ class VideoMaterial extends ImageMaterial {
   async extract(matTime) {
     if (this.extracting) return;
     // 考虑转场补帧的情况下，不在时间轴内的都不需要
-    const { time: maxTime } = this.matTime(this.node.absDrawEndTime - this.node.absStartTime);
+    let { time: maxTime, loops } = this.matTime(this.node.absDrawEndTime - this.node.absStartTime);
+
+    // matTime会返回素材对应的时间(余数), 如果需要循环了, 说明素材一定需要播完，maxTime直接取结尾
+    if (loops > 0) {
+      maxTime = (this.end < 0) ? this.length : this.end // 如果没给to，则取素材的最后时间
+    }
+
     if (matTime > maxTime) return;
     this.extracting = true;
     const ss = performance.now();
     // console.log('!!video cache start', this.node.id, matTime);
     const duration = CACHE_FRAMES / this.player.fps;
-    const frames = await this.videoSource.extract('video', matTime, matTime + duration);
+    const frames = await this.videoSource.extract('video', matTime, matTime + duration); // todo 处理loop的情况
     if (!frames) return;
     let append = false;
     for (let i in this.frames) {
@@ -136,7 +142,7 @@ class VideoMaterial extends ImageMaterial {
       this.frames = frames;
     }
     // console.log('!!video cache', this.node.id, matTime, {
-    //   cost_ms: (performance.now() - ss).toFixed(3), 
+    //   cost_ms: (performance.now() - ss).toFixed(3),
     //   frames: this.frames.length,
     //   from: this.frames[0].t.toFixed(3),
     //   to: this.frames[this.frames.length-1].t.toFixed(3),
@@ -223,8 +229,8 @@ class VideoMaterial extends ImageMaterial {
       this.audioCache = { start, length: data[0].length, data };
       // 更新startIndex 音频decode会有时间偏差，需要重新计算index
       startIndex = Math.round((time - start) * audioSampleRate);
-      // console.log(`!!audio cache ${matSampleRate}=>${audioSampleRate}`, this.node.id, { 
-      //   nt: nodeTime.toFixed(3), 
+      // console.log(`!!audio cache ${matSampleRate}=>${audioSampleRate}`, this.node.id, {
+      //   nt: nodeTime.toFixed(3),
       //   size: this.audioCache.length,
       //   cost_ms: (performance.now() - ss).toFixed(3)});
     }
