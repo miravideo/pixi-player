@@ -22,8 +22,9 @@ class Transition extends Clip {
       return (absTime >= this.absDrawStartTime && absTime < this.absDrawEndTime && this.active);
     }
 
-    // 设置zIndex为前后2个node中高的那个 (之前+1是为了draw的顺序)
-    this.zIndex = Math.max(this.prevSibling?.zIndex || 0, this.nextSibling?.zIndex || 0);
+    // 设置zIndex为前后2个node中【低】的那个，避免转场过程把原先低的上面覆盖的东西挡住 (之前+1是为了draw的顺序)
+    // 取【高】的可能会挡住原先上面的东西，取【低】的可能会让原先下面的露出来，因为转场一般是底层画面，所以取【低】指
+    this.zIndex = Math.min(this.prevSibling?.zIndex || 0, this.nextSibling?.zIndex || 0);
   }
 
   createView() {

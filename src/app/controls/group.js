@@ -4,16 +4,15 @@ const Node = require('./node');
 const MiraEditorBox = require('../views/select-view');
 const { deg } = require('../utils/math');
 const Rect = require('../utils/rect');
-const Move = require('./move');
-const Rotate = require('./rotate');
-const Resize = require('./resize');
-const BaseControl = require('./base');
 const { MAX } = require('../utils/static');
 const Point = require('../utils/point');
+const { uuid } = require('../utils/data');
 
 class NodeGroup extends Node {
-  constructor(nodes) {
+  constructor(editor, nodes) {
     super({type: 'group'});
+    this.editor = editor;
+    this.senderId = uuid();
     this.visible = true; // always visible??
     this.nodes = {};
     this.boxes = {};
@@ -22,8 +21,8 @@ class NodeGroup extends Node {
     else if (typeof nodes === 'object') this.toggleNode(nodes);
   }
 
-  creator() {
-    return Object.values(this.nodes)[0].creator();
+  get player() {
+    return Object.values(this.nodes)[0].player;
   }
 
   initContainer() {
@@ -55,11 +54,12 @@ class NodeGroup extends Node {
 
   createBox(node) {
     const { scale, container } = this;
-    if (!node.getAnchor) return null;
+    if (!node.getView()) return null;
     return MiraEditorBox.create({node, container, scale, selected: false });
   }
 
   toggleNode(node) {
+    this.senderId = uuid(); // change senderId
     if (this.groupSelect(node)) {
       Object.values(this.nodes).map(n => {
         if (this.boxes[n.id]) return;
@@ -85,63 +85,98 @@ class NodeGroup extends Node {
     return this;
   }
 
-  setRotate(rotation) {
-    const delta = rotation - this._rotation;
-    this._rotation = rotation;
-    const anchor = this.metrcs().position;
-    Object.values(this.nodes).map(node => {
-      const box = this.boxes[node.id];
-      if (!box) return;
-      const bp = box.position.rebase(anchor);
-      const { x, y } = bp.rotate(delta).rebase(bp);
-      const deltaAction = { rotation: delta, position: { x, y } };
-      BaseControl.apply(node, deltaAction, 'group-rotate');
-      box.move().rotate();
-    });
-    return this.fit();
+  getAttrs(node, delta) {
+    const view = node.getView();
+    const attrs = {};
+    for (const [k, v] of Object.entries(delta)) {
+      if (!v) continue; // 如果delta=0，就是没改变
+      attrs[k] = view[k] + v;
+    }
+    return attrs;
   }
 
-  setXY(x, y) {
-    x -= this.getX();
-    y -= this.getY();
-    Object.values(this.nodes).map(node => {
-      Move.apply(node, { position: {x, y} });
-      this.boxes[node.id]?.move();
-    });
-    this._metrcs_.position[0] += x;
-    this._metrcs_.position[1] += y;
-    return this.fit();
+  setConf(key, value) {
+    if (!this._change) this._change = {};
+    this._change[key] = value;
   }
 
-  setWH(w, h) {
-    const [ oriWidth, oriHeight ] = this.getWH();
-    w -= oriWidth;
-    h -= oriHeight;
-    let scale = { x: w / oriWidth, y: h / oriHeight };
-    if (scale.x > 0 && scale.y > 0) {
-      // 2个轴都在动，一定是等比例拉伸
-      scale.x = scale.y = Math.max(scale.x, scale.y);
+  async updateView() {
+    if (!this._change) return;
+
+    let rotationDelta, positionDelta, scaleDelta;
+    if (this._change.rotation !== undefined) {
+      rotationDelta = this._change.rotation - this.rotation;
+      this._rotation = this._change.rotation;
+    }
+
+    if (this._change.x !== undefined || this._change.y !== undefined) {
+      const [x, y] = [this._change.x || this.x, this._change.y || this.y];
+      positionDelta = { x: x - this.x, y: y - this.y };
+      this._metrcs_.position[0] = x;
+      this._metrcs_.position[1] = y;
+    }
+
+    if (this._change.width !== undefined || this._change.height !== undefined) {
+      const [w, h] = [this._change.width || this.width, this._change.height || this.height];
+      const sizeDelta = { w: w - this.width, h: h - this.height };
+      scaleDelta = { x: sizeDelta.w / this.width, y: sizeDelta.h / this.height };
+      if (scaleDelta.x !== 0 && scaleDelta.y !== 0) {
+        // 2个轴都在动，一定是等比例拉伸，故统一
+        scaleDelta.x = scaleDelta.y = Math.max(scaleDelta.x, scaleDelta.y);
+      }
+      this._metrcs_.size[0] = w;
+      this._metrcs_.size[1] = h;
     }
 
     const anchor = this.metrcs().position;
-    Object.values(this.nodes).map(node => {
+    const nodes = [];
+    const attrs = {};
+    Object.values(this.nodes).map((node) => {
       const box = this.boxes[node.id];
       if (!box) return;
-      const delta = {
-        size: { width: box.size.width * scale.x, height: box.size.height * scale.y },
-        position: box.position.rebase(anchor).scale(scale),
-      };
-      Resize.apply(node, delta);
-      this.boxes[node.id].resize();
+      const delta = {};
+      if (rotationDelta) {
+        const bp = box.position.rebase(anchor);
+        const { x, y } = bp.rotate(rotationDelta).rebase(bp);
+        Object.assign(delta, { rotation: rotationDelta, x, y });
+      }
+
+      if (scaleDelta) {
+        const _positionDelta = box.position.rebase(anchor).scale(scaleDelta);
+        delta.x = (delta.x || 0) + _positionDelta.x;
+        delta.y = (delta.y || 0) + _positionDelta.y;
+        delta.width = box.size.width * scaleDelta.x;
+        delta.height = box.size.height * scaleDelta.y;
+      }
+
+      if (positionDelta) {
+        delta.x = (delta.x || 0) + positionDelta.x;
+        delta.y = (delta.y || 0) + positionDelta.y;
+      }
+
+      if (Object.values(delta).filter(v => v !== 0).length > 0) {
+        nodes.push(node);
+        attrs[node.id] = this.getAttrs(node, delta);
+      }
     });
-    this._metrcs_.size[0] += w;
-    this._metrcs_.size[1] += h;
-    return this;
+
+    if (nodes.length > 0) {
+      await this.editor.update(nodes, attrs, this.senderId, true);
+      Object.values(nodes).map((node) => {
+        const box = this.boxes[node.id];
+        // update box
+        if (box) box.rotate().resize();
+      });
+    }
+
+    this._change = null;
+    this.fit();
   }
 
   metrcs() {
     if (!this._dirty_) return this._metrcs_;
     this._metrcs_ = { };
+    this._rotation = 0; // todo: 不要重置，而是根据_rotation修改box.bounds() ?
 
     const bounds = { top: MAX, left: MAX, bottom: 0, right: 0 };
     for (const box of Object.values(this.boxes)) {
@@ -165,10 +200,15 @@ class NodeGroup extends Node {
     return this._metrcs_;
   }
 
+  onTime() {
+    return Object.values(this.nodes).every(n => n.onTime());
+  }
+
   destroy() {
     super.destroy();
     this.nodes = null;
     this.boxes = null;
+    this.editor = null;
   }
 }
 

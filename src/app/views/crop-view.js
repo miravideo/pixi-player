@@ -53,9 +53,10 @@ class MiraEditorCrop extends MiraEditorMove {
   metrics() {
     const box = this.parentNode;
     const node = this.node;
-    const [ mw, mh ] = [node.material.width(), node.material.height()];
-    const [ bw, bh ] = node.getWH();
-    const frame = node.getFrame();
+    const view = node.getView();
+    const [ mw, mh ] = [node.material.width, node.material.height];
+    const [ bw, bh ] = [view.width, view.height];
+    const frame = node.frame || { x: 0, y: 0, w: mw, h: mh };;
     // scale 是【画布尺寸】跟【素材原始尺寸】的关系
     const scale = Math.max((bw / frame.w), (bh / frame.h));
     this.rotation = box.rotation;

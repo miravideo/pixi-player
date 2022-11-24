@@ -6,6 +6,7 @@ const MiraEditorCrop = require('../views/crop-view');
 const Move = require('./move');
 const { round, norm2d } = require('../utils/math');
 const Point = require('../utils/point');
+const { dmap } = require('../utils/data');
 
 const MIN_DISTANCE = 10;
 const { LEFT, TOP, RIGHT, BOTTOM } = MiraEditorResize;
@@ -92,25 +93,25 @@ class Crop extends Move {
     }
   }
 
-  onMove(event) {
+  async onMove(event) {
     if (!this.canMove) return;
-    const [ mw, mh ] = [this.node.material.width(), this.node.material.height()];
-    const oriFrame = this.node.getFrame();
+    const [ mw, mh ] = [this.node.material.width, this.node.material.height];
+    const oriFrame = this.node.frame || { x: 0, y: 0, w: mw, h: mh };
     const delta = this.getDelta(event);
     const isMove = event.target.styleClass === 'origin';
     const isOrigin = (event.target.parentNode === this._controls.origin || isMove);
 
     // rotation
     if (this.box.rotation != 0) {
-      const { x, y } = new Point(delta.position).rotate(-this.box.rotation);
-      delta.position = { x, y };
+      const { x, y } = new Point(delta.x, delta.y).rotate(-this.box.rotation);
+      delta.x = x;
+      delta.y = y;
     }
 
     const frame = {
-      x: delta.position?.x || 0, y: delta.position?.y || 0,
-      w: delta.size?.width || 0, h: delta.size?.height || 0,
+      x: delta.x || 0, y: delta.y || 0,
+      w: delta.width || 0, h: delta.height || 0,
     };
-    const applyDelta = { frame };
     const cs = this._controls.cropped.size;
     const cp = this._controls.cropped.position;
     const os = this._controls.origin.size;
@@ -151,29 +152,38 @@ class Crop extends Move {
       else return;
     }
 
+    // delta frame -> percentage frame
+    const absFrame = dmap(frame, (v, k) => v + oriFrame[k]);
+    const pframe = {
+      x: absFrame.x / mw,
+      y: absFrame.y / mh,
+      w: Math.min(absFrame.w, mw - absFrame.x) / mw,
+      h: Math.min(absFrame.h, mh - absFrame.y) / mh,
+    };
+
+    let attrs = { pframe };
     if (this.selector.cropMode && isMove) {
       // 上面公式I的逆运算，其实 x = delta.position.x 只是被约束之后，只能反过来计算了
       const x = (frame.x + (mw * cp.x / os.width)) * os.width / mw - cp.x;
       const y = (frame.y + (mh * cp.y / os.height)) * os.height / mh - cp.y;
-      applyDelta.position = { x, y };
+      let _attrs = this.getAttrs({x, y});
       if (this.box.rotation != 0) {
         const { x, y } = new Point(applyDelta.position).rotate(this.box.rotation);
-        applyDelta.position = { x, y };
+        _attrs = this.getAttrs({x, y});
       }
+      Object.assign(attrs, _attrs);
 
-    } else if (!isOrigin) { // resize box
-      const delta = event.target.constraint(event.delta, this.box.anchor);
-      applyDelta.size = delta.size;
-      applyDelta.position = delta.position;
+    } else if (!isOrigin) { // resize inner box
+      const _delta = event.target.constraint(event.delta, this.box.anchor);
+      const [_f, _mw, _mh, _scale] = this._controls.cropped.metrics();
+
+      Object.assign(attrs, this.getAttrs({x: _delta.x, y: _delta.y}));
+      // node的宽高跟frame保持一致
+      attrs.width = absFrame.w * _scale;
+      attrs.height = absFrame.h * _scale;
     }
 
-    // if (!this.node.frame) {
-    //   // apply origin frame
-    //   frame.x += oriFrame.x, frame.y += oriFrame.y;
-    //   frame.w += oriFrame.w - mw, frame.h += oriFrame.h - mh;
-    // }
-
-    Crop.apply(this.node, applyDelta);
+    await this.editor.update([this.node], attrs, this.id);
     this.fit();
   }
 

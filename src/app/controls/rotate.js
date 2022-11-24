@@ -11,7 +11,7 @@ class Rotate extends Move {
   static TAG = MiraEditorRotate;
 
   show(show) {
-    if (show === undefined) show = true;
+    if (show === undefined) show = !this.selector.withMulti;
     if (this.editor.controls.move?.editMode) show = false;
     if (this._controls.rotate) this._controls.rotate.show(show);
     return this;

@@ -29,7 +29,7 @@ class Move extends BaseControl {
       if (selected && box) this.setNode().appendControl(box).show();
     });
     this.wrap(this.selector, 'enableMulti').after(() => {
-      this.show(); // 多选状态下，隐藏控件，可以再多选到背景挡住的元素
+      this.show(!this.selector.withMulti); // 多选状态下，隐藏控件，可以再多选到背景挡住的元素
     });
     this.wrap(this.selector, 'hideSelect').after(() => {
       this.remove();
@@ -57,7 +57,7 @@ class Move extends BaseControl {
     return (evt) => {
       if (this.constructor.type !== 'move' || !this.box
        // 只在鼠标hover在上面的时候才能键盘移动
-       || (!this.view.hasClass('hover') && !this.editMode)) return;
+       || (!this.view?.hasClass('hover') && !this.editMode)) return;
       if (this.editMode) {
         if (evt.key === 'Backspace') {
           return this.updateText(this.node.delete());
@@ -250,11 +250,12 @@ class Move extends BaseControl {
       this.textView.addEventListener('compositionstart', this.onCompStart.bind(this));
       this.textView.addEventListener('compositionend', this.onCompEnd.bind(this));
       this.textView.addEventListener('input', this.onInputChar.bind(this));
-
-      const evts = this.cachedEvents();
-      this.textView.addEventListener('keyup', evts.keyup);
-      this.textView.addEventListener('keydown', evts.keydown);
       this.cursorView.append(this.textView);
+
+      // 已经从player.editor监听了，重复
+      // const evts = this.cachedEvents();
+      // this.textView.addEventListener('keyup', evts.keyup);
+      // this.textView.addEventListener('keydown', evts.keydown);
     }
 
     const cursor = this.node.cursor();

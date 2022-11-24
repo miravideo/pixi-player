@@ -48,7 +48,7 @@ export class Record extends EventEmitter {
     }
 
     let changed = false;
-    nodes.map(node => {
+    const updates = nodes.map(async (node) => {
       this._nodes[node.id] = node;
       const _attrs = attrs[node.id] || attrs;
       let changeAttr = {}, nodeChanged = false;
@@ -64,9 +64,10 @@ export class Record extends EventEmitter {
         // todo: 修改了src/font等属性，需要重新preload!
         // todo: 不能随便清view缓存，否则会不断的新建view，绑定事件
         // node.clearViewCache();
-        node.updateView();
+        await node.updateView();
       }
     });
+    await Promise.all(updates);
     return changed;
   }
 

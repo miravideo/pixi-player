@@ -1,6 +1,6 @@
 'use strict';
 
-const { HOVER, SELECT, CHANGING, CHANGED, RESIZE, OP_ADD, OP_DELETE, OP_END, MAX } = require('../utils/static');
+const { HOVER, SELECT, CHANGING, CHANGED, RESIZE, MAX, KEYDOWN, KEYUP } = require('../utils/static');
 const MiraEditorBox = require('../views/select-view');
 const BaseControl = require('./base');
 const NodeGroup = require('./group');
@@ -18,13 +18,13 @@ class Select extends BaseControl {
   }
 
   get cropMode() {
-    return this.editor.opts?.cropMode === 'frame'
-     || this.editor.creator?.conf?.cropMode === 'frame';
+    // 画幅不动的crop
+    return this.editor.cropMode === 'frame';
   }
 
   events() {
     return {
-      // keydown: this.onKeyDown(), keyup: this.onKeyUp(), enable: this.onEnable(),
+      [KEYDOWN]: this.onKeyDown(), [KEYUP]: this.onKeyUp(),
       // [CHANGED]: this.onChanged(), [CHANGING]: this.onChanging(),
       [RESIZE]: this.onResize(), 
       [SELECT]: this.onSelect(),
@@ -71,7 +71,7 @@ class Select extends BaseControl {
   }
 
   enableMulti(enable) {
-    // 这个方法是给hook用的
+    // 这个方法是给hook用的, 比如在多选状态下，隐藏move控件，可以再多选到背景挡住的元素
     this.withMulti = enable;
   }
 
@@ -116,9 +116,9 @@ class Select extends BaseControl {
       return selected.toggleNode(node);
     }
     if (node.groupId && node.groupId !== 'NULL') {
-      return new NodeGroup(node);
+      return new NodeGroup(this.editor, node);
     } else if (selected && selected.id !== node.id) {
-      return new NodeGroup([selected, node]);
+      return new NodeGroup(this.editor, [selected, node]);
     }
     return node;
   }

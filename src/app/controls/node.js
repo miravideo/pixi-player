@@ -27,25 +27,25 @@ class Node extends EventEmitter {
 
   groupSelect(node) {
     if (!node.groupId || node.groupId == 'NULL' || !this.nodes) return false;
-    node.creator().allNodes.map(n => {
+    node.root().allNodes.map(n => {
       if (n.groupId === node.groupId) this.nodes[n.id] = n;
     });
     this.id = node.groupId;
     return true;
   }
 
-  get display() {
+  getView() {
     return this._proxy;
   }
 
   annotate() {}
 
   addEventsTo(editor, enable) {
-    editor.apply({ node: this, enable, recursive: false, types: { group: true } });
+    // editor.apply({ node: this, enable, recursive: false, types: { group: true } });
   }
 
-  creator() {
-    if (this.parent) return this.parent.creator();
+  get player() {
+    if (this.parent) return this.parent.player;
     return this._proxy;
   }
 
@@ -53,20 +53,48 @@ class Node extends EventEmitter {
     super.emit(type, {...args, target: this});
   }
 
-  getAnchor() {
+  get anchor() {
     return this._anchor;
   }
 
-  getRotation() {
+  get rotation() {
     return this._rotation;
   }
 
-  getX() {
+  get x() {
     return this.getXY()[0];
   }
 
-  getY() {
+  get y() {
     return this.getXY()[1];
+  }
+
+  get width() {
+    return this.getWH()[0];
+  }
+
+  get height() {
+    return this.getWH()[1];
+  }
+
+  set rotation(v) {
+    this._rotation = v;
+  }
+
+  set x(v) {
+    this._position.x = v;
+  }
+
+  set y(v) {
+    this._position.y = v;
+  }
+
+  set width(v) {
+    this._size.w = v;
+  }
+
+  set height(v) {
+    this._size.h = v;
   }
 
   getXY() {
@@ -83,25 +111,9 @@ class Node extends EventEmitter {
     return { position, size };
   }
 
-  setRotate(rotation) {
-    this._rotation = rotation;
-    return this;
-  }
-
-  setXY(x, y) {
-    this._position.x = x;
-    this._position.y = y;
-    return this;
-  }
-
-  setWH(w, h) {
-    this._size.w = w;
-    this._size.h = h;
-    return this;
-  }
-
   fitSize() {}
   fitTexture() {}
+  updateView() {}
 
   points() {
     const { w, h } = this._size;
@@ -119,10 +131,11 @@ class Node extends EventEmitter {
   }
 
   syncWith(node) {
-    this._rotation = node.getRotation();
-    const [ x, y ] = node.getXY();
-    const { x: ax, y: ay } = node.getAnchor();
-    const [ w, h ] = node.getWH();
+    const view = node.getView();
+    this._rotation = view.rotation;
+    const [ x, y ] = [view.x, view.y];
+    const { x: ax, y: ay } = view.anchor;
+    const [ w, h ] = [view.width, view.height];
     this._size = { w, h };
     this._anchor = { x: ax, y: ay };
     this._position = { x, y };
@@ -132,6 +145,16 @@ class Node extends EventEmitter {
   remove() {
     this.parent && this.parent.removeChild(this);
     return this;
+  }
+
+  getConf(key) {
+    // console.log('vnode.getConf', key);
+    return this[key];
+  }
+
+  setConf(key, value) {
+    // console.log('vnode.setConf', key, value);
+    this[key] = value;
   }
 
   destroy() {

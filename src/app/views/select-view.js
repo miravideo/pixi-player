@@ -94,8 +94,8 @@ class MiraEditorBox extends MiraEditorBase {
     });
   }
 
-  bounds() {
-    return Rect.bounds(this.points());
+  bounds(proj=null) {
+    return Rect.bounds(this.points().map(pt => proj ? proj(pt) : pt));
   }
 
   addHandleBox() {

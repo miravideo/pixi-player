@@ -94,8 +94,8 @@ class PlayerUI {
     return this._history;
   }
 
-  async _queuedUpdate(update) {
-    return this._queue.enqueue(async () => {
+  async _queuedUpdate(update, sync=false) {
+    const run = async () => {
       if (!this.history) return;
       const res = await update();
       this._changed = res.changed || this._changed;
@@ -105,10 +105,11 @@ class PlayerUI {
         await this.core.render();
       }
       return res;
-    });
+    }
+    return sync ? run() : this._queue.enqueue(run);
   }
 
-  async update(nodes, attrs, senderId) {
+  async update(nodes, attrs, senderId, sync) {
     return this._queuedUpdate(async () => {
       let record = new Record(senderId);
       const changed = await record.update(nodes, attrs);
@@ -116,7 +117,7 @@ class PlayerUI {
       record = this.history.append(record);
       // console.log('update', {record, changed});
       return {record, changed};
-    });
+    }, sync);
   }
 
   async redo(n) {

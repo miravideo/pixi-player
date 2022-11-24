@@ -75,7 +75,7 @@ class BaseControl extends EventEmitter {
   }
 
   async update(nodes, delta) {
-    return await this.editor.update(nodes, this.getAttrs(delta), this.id);
+    return await this.editor.update(nodes, this.getAttrs(delta), this.box?.uuid || this.id); 
   }
 
   destroy() {

@@ -13,7 +13,7 @@ import { Rectangle, SCALE_MODES } from 'pixi.js'
 const DEFAULT_CONF = {
   x: '50vw', y: '50vh', anchor: [0.5, 0.5],
   scale: 1, rotation: 0, alpha: 1, speed: 1, volume: 1,
-  enableAudioAnalyser: false,
+  enableAudioAnalyser: false, 'object-fit': 'cover',
 };
 
 const VIEW_TYPES = {
@@ -350,7 +350,7 @@ class Clip extends EventEmitter {
   }
 
   vu(key, val) {
-    if (typeof(val) === 'object') {
+    if (val && typeof(val) === 'object') { // null is a object
       return Utils.dmap(val, (v, k, ks) => {
         // console.log({v, k, ks});
         return this.vu(ks.join('.'), v);

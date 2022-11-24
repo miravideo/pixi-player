@@ -61,26 +61,26 @@ class Constraint extends BaseControl {
 
   onResize() {
     return (evt) => {
-      if (this.container) this.container.remove();
-      this.container = null;
+      if (this.ctr) this.ctr.remove();
+      this.ctr = null;
       // 避免窗口不断缩放时，不停的updateConstraint
       this.lock(500, () => this.updateConstraint(), 'resize');
     }
   }
 
   initContainer() {
-    if (!this.container) {
-      this.container = document.createElement('div');
-      this.container.classList.add('mirae-constraint');
-      this.container.setAttribute('mira-editor-el', '');
+    if (!this.ctr) {
+      this.ctr = document.createElement('div');
+      this.ctr.classList.add('mirae-constraint');
+      this.ctr.setAttribute('mira-editor-el', '');
     }
-    if (this.container.parentNode !== this.selector.container) {
-      this.container.remove();
-      this.selector.container.append(this.container);
+    if (this.ctr.parentNode !== this.selector.container) {
+      this.ctr.remove();
+      this.selector.container.append(this.ctr);
     }
     // remove all children
-    while (this.container.firstChild) {
-      this.container.removeChild(this.container.firstChild);
+    while (this.ctr.firstChild) {
+      this.ctr.removeChild(this.ctr.firstChild);
     }
     this.refBounds = {}; // clear up refs
     this.scale = this.editor.scale;
@@ -111,9 +111,9 @@ class Constraint extends BaseControl {
     this.selected = Node.from(node);
     // debug node box
     if (this.editor.opts.debugCanvasConstraint) {
-      const { container, scale } = this;
+      const { ctr, scale } = this;
       if (this.debug_box) this.debug_box.remove();
-      this.debug_box = MiraEditorBox.create({ node: this.selected, container, scale }).addClass('mirae-debug-box');
+      this.debug_box = MiraEditorBox.create({ node: this.selected, container: ctr, scale }).addClass('mirae-debug-box');
       this.selected.on(CHANGING, () => this.debug_box.fit(scale));
     }
   }
@@ -191,7 +191,7 @@ class Constraint extends BaseControl {
       evt.delta = { x: 0, y: 0 };
       if (!this.ref[k] || this.ref[k] !== refKey) {
         const to_rad = rad(to);
-        const time = node.creator().currentTime / 1000;
+        const time = node.player.currentTime / 1000;
         node.setRotate(to_rad);
         node.emit(CHANGING, { action: Rotate.type , delta: to_rad - node.getRotation(), time });
         this.ref[k] = refKey;
@@ -257,8 +257,8 @@ class Constraint extends BaseControl {
     const ns = rects.reduce((a, rect) => rect[func].call(rect, false).concat(a), []);
     const range = [Math.min(...ns), Math.max(...ns)];
     if (!this._controls[type]) {
-      const { container, scale, canvas } = this;
-      this._controls[type] = MiraEditorLine.create({ container, scale, type, val, range, key, canvas });
+      const { ctr, scale, canvas } = this;
+      this._controls[type] = MiraEditorLine.create({ container: ctr, scale, type, val, range, key, canvas });
     } else {
       this._controls[type].range(range);
     }
@@ -278,7 +278,7 @@ class Constraint extends BaseControl {
 
   remove() {
     this.hideAll();
-    this.container = null;
+    this.ctr = null;
     if (this.debug_box) this.debug_box.remove();
     this.debug_box = null;
   }

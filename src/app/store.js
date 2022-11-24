@@ -5,9 +5,18 @@ import EventEmitter from "eventemitter3";
 const { Player, Burner } = global['pixi-player'] || {};
 import pkg from '../../package.json';
 import { color } from './utils/color';
+import PluginUtil from './utils/plugin';
 
 const PRELOAD_RATIO = 0.1;
 const KEYS = { space:' ', left:'ArrowLeft', right:'ArrowRight' };
+
+const ExtendsEvent = {
+  get mctrlKey() {
+    return this.ctrlKey || this.metaKey;
+  },
+}
+PluginUtil.mixin({src: ExtendsEvent, dst: KeyboardEvent});
+PluginUtil.mixin({src: ExtendsEvent, dst: MouseEvent});
 
 class Store extends EventEmitter {
   constructor(opt) {
@@ -199,12 +208,14 @@ class Store extends EventEmitter {
     height = (this.scale * height) >> 0;
     const marginLeft = left + (ctrWidth - width) / 2;
     const marginTop = top + ((ctrHeight - height) / 2);
+    const style = {
+      ctrWidth: this.opt.width, ctrHeight: this.opt.height,
+      width, height, marginLeft, marginTop
+    };
     runInAction(() => {
-      this.canvasStyle = {
-        ctrWidth: this.opt.width, ctrHeight: this.opt.height,
-        width, height, marginLeft, marginTop
-      };
+      this.canvasStyle = style;
     });
+    return style;
   }
 
   get containerStyle() {
@@ -255,10 +266,14 @@ class Store extends EventEmitter {
   }
 
   keyDown(e) {
-    if (Object.values(KEYS).includes(e.key)) e.preventDefault();  // 防止滚动页面
+    this.player.emit('keydown', e.nativeEvent);
+    if (Object.values(KEYS).includes(e.key)) {
+      e.preventDefault();  // 防止滚动页面
+    }
   }
 
   keyUp(e) {
+    this.player.emit('keyup', e.nativeEvent);
     if (!this.enabled || !this.opt.enableKeyboard) return;
     if (e.key === KEYS.space) {
       this.togglePlay();
@@ -319,7 +334,7 @@ class Store extends EventEmitter {
   resize(width, height) {
     this.width = width;
     this.height = height;
-    this.fit();
+    this.player.emit('resize', this.fit());
   }
 
   get width() {

@@ -1,5 +1,6 @@
 'use strict';
 
+const { uuid } = require('../utils/data');
 const { norm2d } = require('../utils/math');
 
 class MiraEditorBase extends HTMLElement {
@@ -7,6 +8,7 @@ class MiraEditorBase extends HTMLElement {
   constructor() {
     super();
     this.lockTimer = {};
+    this.uuid = uuid();
   }
 
   scrollToVisible(opts={center: false, top: false, smooth: true}) {
