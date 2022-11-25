@@ -219,7 +219,6 @@ class Select extends BaseControl {
   copy() {
     this.editor.copyNode = this.selected;
     if (this.selectedBox?.addClass) this.selectedBox.addClass('copy', 300);
-    this.editor.toast('Copied!', 1000);
   }
 
   async paste(src, opts={}) {
@@ -294,6 +293,7 @@ class Select extends BaseControl {
     }
     if (emitEnd) {
       this.editor.hideLoading();
+      this.editor.toast('Copied!', 1000);
     }
     return nodes;
   }
