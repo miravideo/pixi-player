@@ -54,6 +54,14 @@ class PlayerUI {
     this.store.toast(msg, durationInMs);
   }
 
+  showLoading(progress) {
+    this.store.showLoading(progress);
+  }
+
+  hideLoading() {
+    this.store.hideLoading();
+  }
+
   get core() {
     return this.store.player;
   }

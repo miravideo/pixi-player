@@ -36,6 +36,7 @@ class Editor extends EventEmitter {
 
   init() {
     this.events = {
+      burning: this.onBlur(),
       playing: this.onBlur(),
       timeupdate: this.onTimeUpdate(),
       resize: this.onResize(),
@@ -93,6 +94,14 @@ class Editor extends EventEmitter {
 
   toast(msg, durationInMs) {
     this.player.toast(msg, durationInMs);
+  }
+
+  showLoading(progress) {
+    this.player.showLoading(progress);
+  }
+
+  hideLoading() {
+    this.player.hideLoading();
   }
 
   onTimeUpdate() {
@@ -192,6 +201,18 @@ class Editor extends EventEmitter {
 
   async update(nodes, attrs, senderId, sync) {
     return await this.player.update(nodes, attrs, senderId, sync);
+  }
+
+  async cloneNode(src) {
+    const node = new src.constructor({...src.conf, refId: null, id: null});
+    node.parent = src.parent; // tmp parent, just set for annotate
+    if (src.cachedFontFamily) node.cachedFontFamily = src.cachedFontFamily; // todo: font
+    node.copySourceId = src.id;
+    node.trackId = src.trackId;
+    await node.preload();
+    node.annotate();
+    node.parent = null; // remove tmp parent..
+    return node;
   }
 
   destroy() {

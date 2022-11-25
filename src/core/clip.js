@@ -175,7 +175,7 @@ class Clip extends EventEmitter {
   }
 
   getView(absTime, type) {
-    if (!absTime) absTime = this.player.currentTime;
+    if (!absTime) absTime = this.player?.currentTime || 0;
     if (!type) type = 'seek';
     const cacheType = this.cacheType(type);
     if (!this._views[cacheType]) {
@@ -261,7 +261,7 @@ class Clip extends EventEmitter {
   createView() {}
 
   updateView() {
-    const view = this.getView();
+    const view = this.parent ? this.getView() : null;
     // clear other type cache
     Object.values(this._views).map(v => {
       if (!v || v === view) return;
@@ -277,6 +277,7 @@ class Clip extends EventEmitter {
   }
 
   getConf(key, autounit=true, absTime=null) {
+    if (['parent', 'nextSibling', 'prevSibling'].includes(key)) return this[key];
     if (this.keyframe?.keyFrames[key]) { // has keyframe value
       absTime = absTime || this.player.currentTime;
       const keyFrameAttr = this.keyframe.renderAttr(absTime - this.absStartTime, this);
@@ -288,8 +289,6 @@ class Clip extends EventEmitter {
   getRawConf(key, autounit=true, absTime=null) {
     if (!key || typeof(key) !== 'string' || !this.conf) return undefined;
     autounit = !this.forceNoUnit(key) && autounit;
-
-    // todo: 处理 key=parent
 
     const defaultVal = this.defaultVal(key);
     let val;
@@ -312,11 +311,30 @@ class Clip extends EventEmitter {
 
   setConf(key, value, autounit=true, absTime=null) {
     if (!key || typeof(key) !== 'string') throw new Error(`Invalid key: ${key}`);
-    if (this.keyframe?.keyFrames[key]) {
+    if (['nextSibling', 'prevSibling'].includes(key)) {
+      return this[key] = value;
+    } else if (key === 'parent' && value !== this.parent) {
+      if (this.parent) {
+        // remove view
+        const view = this.getView();
+        if (view && view.parent) view.parent.removeView(view);
+        // remove parent
+        const parent = this.parent;
+        parent.removeChild(this);
+        parent.refreshSibling && parent.refreshSibling();
+      }
+      if (value && value.type) {
+        value.addChild(this, this.nextSibling);
+        this.parent.refreshSibling && this.parent.refreshSibling();
+      }
+      return;
+    } else if (this.keyframe?.keyFrames[key]) {
       // has keyframe value
       return this.setKeyFrame({ [key]: value }, absTime || this.player.currentTime);
     }
+
     autounit = !this.forceNoUnit(key) && autounit;
+    // console.log('setConf', {key, value, vu: this.vu(key, value)});
     if (autounit) value = this.vu(key, value);
     let obj = this.conf;
     if (!key.includes('.')) return obj[key] = value;

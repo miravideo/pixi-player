@@ -76,10 +76,7 @@ class Store extends EventEmitter {
     this.cancelFunc = () => {
       this.burner.cancel();
     }
-    runInAction(() => {
-      this.loading = true;
-      this.loadingProgress = 0.001;
-    });
+    this.showLoading(0.001);
 
     const url = await this.burner.export(this.player, (p) => {
       runInAction(() => {
@@ -90,10 +87,7 @@ class Store extends EventEmitter {
     if (!url) {
       // fail or cancel
       this.toast('Fail!');
-      runInAction(() => {
-        this.loading = false;
-        this.cancelFunc = null;
-      });
+      this.hideLoading();
       return;
     }
 
@@ -108,10 +102,7 @@ class Store extends EventEmitter {
       a.remove();
     }, 1000);
 
-    runInAction(() => {
-      this.loading = false;
-      this.cancelFunc = null;
-    });
+    this.hideLoading();
   }
 
   async load() {
@@ -119,9 +110,8 @@ class Store extends EventEmitter {
     this.cancelFunc = () => {
       this.player.destroy();
     }
-    runInAction(() => {
-      this.loading = true;
-    });
+
+    this.showLoading();
     const onprogress = (progress) => {
       runInAction(() => {
         this.loadingProgress = progress;
@@ -138,10 +128,7 @@ class Store extends EventEmitter {
       this.focus();
       runInAction(() => { this.play = true });
     }).on('preloading', (evt) => {
-      runInAction(() => {
-        this.loading = true;
-        this.loadingProgress = PRELOAD_RATIO + (1-PRELOAD_RATIO) * (evt.loaded / evt.total);
-      });
+      this.showLoading(PRELOAD_RATIO + (1-PRELOAD_RATIO) * (evt.loaded / evt.total));
     }).on('error', (e) => {
       if (e.error) {
         runInAction(() => {
@@ -167,11 +154,10 @@ class Store extends EventEmitter {
 
     await this.player.init({...this.opt, onprogress, view: this.canvasRef.current });
     if (!this.player) return;
+    this.hideLoading();
     runInAction(() => {
       this.loaded = true;
-      this.loading = false;
       this.duration = this.player.duration;
-      this.cancelFunc = null;
     });
     this.fit();
 
@@ -230,6 +216,27 @@ class Store extends EventEmitter {
     this.player.emit('click', e.nativeEvent);
     if (this.opt.disableClickPlay) return;
     this.togglePlay();
+  }
+
+  showLoading(progress) {
+    runInAction(() => {
+      this.loading = true;
+      if (progress > 0 && progress <= 1) this.loadingProgress = Number(progress);
+    });
+  }
+
+  hideLoading() {
+    runInAction(() => {
+      this.loading = false;
+      this.loadingProgress = 0;
+      this.cancelFunc = null;
+    });
+  }
+
+  cancelLoading() {
+    if (!this.loading) return;
+    if (this.cancelFunc) this.cancelFunc();
+    this.hideLoading();
   }
 
   togglePlay() {
@@ -320,15 +327,6 @@ class Store extends EventEmitter {
     this.opt.disableClickPlay = enable;
     this.opt.outsideControls = enable;
     this.fit();
-  }
-
-  cancelLoading() {
-    if (!this.loading) return;
-    if (this.cancelFunc) this.cancelFunc();
-    runInAction(() => {
-      this.loading = false;
-      this.cancelFunc = null;
-    });
   }
 
   resize(width, height) {

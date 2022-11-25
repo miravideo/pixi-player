@@ -1,5 +1,6 @@
 'use strict';
 
+const { uuid } = require('../utils/data');
 const { HOVER, SELECT, CHANGING, CHANGED, RESIZE, MAX, KEYDOWN, KEYUP } = require('../utils/static');
 const MiraEditorBox = require('../views/select-view');
 const BaseControl = require('./base');
@@ -43,10 +44,12 @@ class Select extends BaseControl {
 
   onKeyDown() {
     return (evt) => {
+      // 文字编辑模式下，不响应这些事件了
+      if (this.editor.controls.move.editMode) return;
       const lockKey = 'keyboard';
       if (MULTI_KEYS.includes(evt.key)) return this.enableMulti(true);
       const key = `${evt.key}`.toLowerCase();
-      const canRespond = this.editor.responder === this.constructor.type;
+      const canRespond = true;//this.editor.responder === this.constructor.type;
       if (this.locked(lockKey)) return evt.preventDefault();
       if (evt.mctrlKey && key === 'c' && canRespond) {
         this.copy();
@@ -210,6 +213,143 @@ class Select extends BaseControl {
       } else {
         this.hideSelect();
       }
+    }
+  }
+
+  copy() {
+    this.editor.copyNode = this.selected;
+    if (this.selectedBox?.addClass) this.selectedBox.addClass('copy', 300);
+    this.editor.toast('Copied!', 1000);
+  }
+
+  async paste(src, opts={}) {
+    src = src || this.editor.copyNode;
+    if (!src) return;
+    let { emitEnd=true, nodes=null, track, time, senderId } = opts;
+    nodes = nodes || {};
+
+    if (emitEnd) {
+      senderId = uuid();
+      this.editor.showLoading(0.01);
+    }
+
+    const copyChild = async (children, parent, srcId) => {
+      const _opt = { emitEnd:false, senderId, nodes: {[srcId]:parent} };
+      await this.paste(new NodeGroup(children), _opt);
+    }
+
+    const applyPaste = async (sn) => {
+      const node = await this.editor.cloneNode(sn);
+      nodes[sn.id] = node;
+
+      const to = { zIndex: sn.zIndex, parent: sn.parent };
+
+      // 位置偏移一点
+      // let [x, y] = [sn.getConf('x'), sn.getConf('y')];
+      // to.x = x + 30, to.y = y + 30;
+
+      // 若parent也在本次复制之列，保持复制后的关系
+      if (sn.nextSibling) to.nextSibling = sn.nextSibling;
+      if (nodes[sn.parent.id]) to.parent = nodes[sn.parent.id];
+      if (offset !== 0 && !nodes[sn.parent.id] && sn.parent.type !== 'spine') {
+        to.start = Math.max(0, sn.startTime + offset);
+      }
+      to.trackId = track ? track.id : sn.trackId;
+
+      // Select.apply(node, { to }, action);
+      // todo: 合并到一起提交
+      await this.editor.update([node], to, senderId);
+
+      if (sn.type === 'scene') {
+        await copyChild(sn.allNodes, node, sn.id);
+      } else if (sn.type === 'text' && sn.speech) {
+        await copyChild(sn.speech, node, sn.id);
+      }
+    }
+
+    let offset = 0;
+    if (src.nodes) {
+      const srcNodes = Object.values(src.nodes);
+      // 如果目标轨道本身就是当前复制源node的轨道，那就都不动
+      if (srcNodes.map(n => n.trackId).includes(track?.id)) {
+        track = null;
+      }
+
+      if (emitEnd && time) { // todo: emitEnd只是来判断是否是"根"复制
+        // 把最早的node的时间，移到当前时间
+        let minStartTime = MAX;
+        srcNodes.map(n => minStartTime = Math.min(n.absStartTime, minStartTime));
+        offset = time - minStartTime;
+      }
+
+      // 根节点在前，先复制
+      srcNodes.sort((a, b) => a.parents.length - b.parents.length);
+      for (const sn of srcNodes) {
+        await applyPaste(sn);
+      }
+    } else {
+      // todo: emitEnd只是来判断是否是"根"复制
+      if (emitEnd && time) offset = time - src.absStartTime;
+      await applyPaste(src);
+    }
+    if (emitEnd) {
+      this.editor.hideLoading();
+    }
+    return nodes;
+  }
+
+  delete(node, deselect=true) {
+    if (!node) return;
+    const senderId = uuid();
+    const deleteNode = (node) => {
+      if (node.children.length > 0) {
+        if (['scene', 'cover'].includes(node.type)) { // 移除所有各级子节点
+          const to = { removed: true, parent: null };
+          node.allNodes.map(x => {
+            this.editor.update([x], to, senderId);
+          });
+        } else if (node.type === 'text' && node.speech) { // text下面的speech要删掉
+          const to = { removed: true, parent: null };
+          node.children.filter(x => x.type === 'speech').map(x => {
+            this.editor.update([x], to, senderId);
+          });
+        } else { // 把自己的children给parent
+          const isInTrack = ['spine', 'track'].includes(node.parent.type);
+          const parent = isInTrack ? node.creator() : node.parent;
+          node.children.map(x => {
+            const to = { parent };
+            to.start = x.startTime + node.startTime;
+            if (x.conf.end) to.end = x.endTime + node.startTime;
+            this.editor.update([x], to, senderId);
+          });
+        }
+      }
+
+      const to = { removed: true, parent: null };
+      if (node.prevSibling) to.prevSibling = null;
+      if (node.nextSibling) to.nextSibling = null;
+
+      // remove next trans
+      if (node.type !== 'trans') {
+        if (!node.nextSibling && node.prevSibling?.type === 'trans') deleteNode(node.prevSibling);
+        if (node.nextSibling?.type === 'trans') deleteNode(node.nextSibling);
+      }
+
+      this.editor.update([node], to, senderId);
+    }
+
+    if (node.nodes) {
+      const nodes = Object.values(node.nodes);
+      // 根节点在前，先删除/恢复
+      nodes.sort((a, b) => a.parents.length - b.parents.length);
+      nodes.map(n => deleteNode(n));
+    } else {
+      deleteNode(node);
+    }
+
+    if (deselect) {
+      this.hideSelect(); // 必须先删再hide, 不然group可能已经destroy了
+      // this.editor.hideSelect();
     }
   }
 
