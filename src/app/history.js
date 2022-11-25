@@ -50,7 +50,6 @@ export class Record extends EventEmitter {
 
     let changed = false;
     const updates = nodes.map(async (node) => {
-      this._nodes[node.id] = node;
       const _attrs = attrs[node.id] || attrs;
       let changeAttr = {}, nodeChanged = false;
       for (const [k, to] of Object.entries(_attrs)) {
@@ -62,11 +61,16 @@ export class Record extends EventEmitter {
         changed = nodeChanged = true;
       }
       if (nodeChanged) {
-        if (save) this.updateAttr(node.id, changeAttr);
         // todo: 修改了src/font等属性，需要重新preload!
         // todo: 不能随便清view缓存，否则会不断的新建view，绑定事件
         // node.clearViewCache();
-        await node.updateView();
+        await node.updateView(this.senderId);
+
+        // 虚拟node，不保存
+        if (node.isVirtual) return;
+        // 保存记录
+        if (save) this.updateAttr(node.id, changeAttr);
+        this._nodes[node.id] = node;
       }
     });
     await Promise.all(updates);

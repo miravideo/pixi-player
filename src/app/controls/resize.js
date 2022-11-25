@@ -61,8 +61,8 @@ class Resize extends Move {
   }
 
   getDelta(event) {
-    const useScaleForFixRatio = ['image', 'video'].includes(this.node.type); // , 'text'
-    return event.target.constraint(event.delta, null, useScaleForFixRatio);
+    const useScale = ['image', 'video'].includes(this.node.type);
+    return event.target.constraint(event.delta, null, useScale);
   }
 
   async onMove(event) {
@@ -70,7 +70,15 @@ class Resize extends Move {
     const delta = this.getDelta(event);
     if (Math.round(delta.width) === 0 && Math.round(delta.height) === 0) return;
     if (this.node.width + delta.width < 1 || this.node.height + delta.height < 1) return;
-    await this.update([this.node], delta);
+    const attrs = {};
+    if (this.node.type === 'text' && delta.height) {
+      // text高度变了，就把font-size也一起变了(等比例)
+      const { height } = this.getViewAttr({ height: 0 });
+      attrs.fontSize = this.node.fontSize * (1 + (delta.height / height));
+      // 如果原先没有height，也不要设置
+      if (!this.node.conf.height) delete delta.height;
+    }
+    await this.update(delta, attrs);
     this.box.resize();
     const { width, height } = round(this.box.size, 0);
     this.toast(`${width} × ${height}`, 1000);

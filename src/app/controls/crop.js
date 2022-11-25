@@ -166,10 +166,10 @@ class Crop extends Move {
       // 上面公式I的逆运算，其实 x = delta.position.x 只是被约束之后，只能反过来计算了
       const x = (frame.x + (mw * cp.x / os.width)) * os.width / mw - cp.x;
       const y = (frame.y + (mh * cp.y / os.height)) * os.height / mh - cp.y;
-      let _attrs = this.getAttrs({x, y});
+      let _attrs = this.getViewAttr({x, y});
       if (this.box.rotation != 0) {
         const { x, y } = new Point(applyDelta.position).rotate(this.box.rotation);
-        _attrs = this.getAttrs({x, y});
+        _attrs = this.getViewAttr({x, y});
       }
       Object.assign(attrs, _attrs);
 
@@ -177,7 +177,7 @@ class Crop extends Move {
       const _delta = event.target.constraint(event.delta, this.box.anchor);
       const [_f, _mw, _mh, _scale] = this._controls.cropped.metrics();
 
-      Object.assign(attrs, this.getAttrs({x: _delta.x, y: _delta.y}));
+      Object.assign(attrs, this.getViewAttr({x: _delta.x, y: _delta.y}));
       // node的宽高跟frame保持一致
       attrs.width = absFrame.w * _scale;
       attrs.height = absFrame.h * _scale;

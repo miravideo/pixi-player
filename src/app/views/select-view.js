@@ -121,16 +121,15 @@ class MiraEditorBox extends MiraEditorBase {
       return norm2d([p.x - center.x, p.y - center.y]);
     });
 
-    const short = Math.min(w, h); // 短边
-    dists[2] -= short * 0.1; // 相比top, 优先bottom, 因下方控件空间更多 (没有考虑转了超过90度的情况)
+    dists[2] -= 10; // 相比top, 优先bottom, 因下方控件空间更多 (没有考虑转了超过90度的情况)
     const minDist = Math.min(...dists);
     const minIdx = dists.indexOf(minDist);
 
     const classList = this.handleBox.classList;
     const positions = [ 'left', 'top', 'bottom', 'right' ];
     const idx = positions.map(p => classList.contains(p)).findIndex(x => x);
-    // 如果当前控件点距离跟最小距离的差，小于短边一半，就暂时不改，避免跳动
-    if (idx === minIdx || (dists[idx] - minDist) / short < 0.5) return this;
+    // 如果当前控件点距离跟最小距离的差，小于10，就暂时不改，避免跳动
+    if (idx === minIdx || (dists[idx] - minDist) < 10) return this;
     classList.remove(...positions);
     classList.add(positions[minIdx]);
     this.setRotate(); // update rotate cursor

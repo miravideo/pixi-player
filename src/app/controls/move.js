@@ -158,20 +158,6 @@ class Move extends BaseControl {
     return dmap(event.delta, n => n / this.box.scale);
   }
 
-  getAttrs(delta) {
-    const { nodeView } = this.box;
-    const attrs = {};
-    for (const [k, v] of Object.entries(delta)) {
-      if (!v) continue; // 如果delta=0，就是没改变
-      if (k === 'scale') {
-        attrs[k] = nodeView.relativeScale.x * (1 + v);
-      } else {
-        attrs[k] = nodeView[k] + v;
-      }
-    }
-    return attrs;
-  }
-
   point(event) {
     const boxLeftTop = this.box.points()[0];
     return this.canvasCoord(event, 1 / this.box.scale)
@@ -191,7 +177,7 @@ class Move extends BaseControl {
     }
     // 只要开始移动了，就退出multi模式，不然可能会hover自己
     if (event.moved) this.selector.enableMulti(false);
-    await this.update([this.node], this.getDelta(event));
+    await this.update(this.getDelta(event));
     this.box.move();
     const { x: pX, y: pY } = round(this.box.position, 0);
     this.toast(`X:${pX} Y:${pY}`, 1000);

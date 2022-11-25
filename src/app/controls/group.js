@@ -12,8 +12,8 @@ class NodeGroup extends Node {
   constructor(editor, nodes) {
     super({type: 'group'});
     this.editor = editor;
-    this.senderId = uuid();
-    this.visible = true; // always visible??
+    // this.visible = true; // always visible??
+    this.isVirtual = true;
     this.nodes = {};
     this.boxes = {};
     this.initContainer();
@@ -59,7 +59,6 @@ class NodeGroup extends Node {
   }
 
   toggleNode(node) {
-    this.senderId = uuid(); // change senderId
     if (this.groupSelect(node)) {
       Object.values(this.nodes).map(n => {
         if (this.boxes[n.id]) return;
@@ -85,22 +84,12 @@ class NodeGroup extends Node {
     return this;
   }
 
-  getAttrs(node, delta) {
-    const view = node.getView();
-    const attrs = {};
-    for (const [k, v] of Object.entries(delta)) {
-      if (!v) continue; // 如果delta=0，就是没改变
-      attrs[k] = view[k] + v;
-    }
-    return attrs;
-  }
-
   setConf(key, value) {
     if (!this._change) this._change = {};
     this._change[key] = value;
   }
 
-  async updateView() {
+  async updateView(senderId) {
     if (!this._change) return;
 
     let rotationDelta, positionDelta, scaleDelta;
@@ -145,8 +134,11 @@ class NodeGroup extends Node {
         const _positionDelta = box.position.rebase(anchor).scale(scaleDelta);
         delta.x = (delta.x || 0) + _positionDelta.x;
         delta.y = (delta.y || 0) + _positionDelta.y;
-        delta.width = box.size.width * scaleDelta.x;
-        delta.height = box.size.height * scaleDelta.y;
+        // 统一只改scale
+        delta.scale = Math.max(scaleDelta.x, scaleDelta.y);
+        // delta.width = box.size.width * scaleDelta.x;
+        // delta.height = box.size.height * scaleDelta.y;
+        // todo: _positionDelta需要矫正，否则不断拉伸会一直漂移。。。
       }
 
       if (positionDelta) {
@@ -156,12 +148,13 @@ class NodeGroup extends Node {
 
       if (Object.values(delta).filter(v => v !== 0).length > 0) {
         nodes.push(node);
-        attrs[node.id] = this.getAttrs(node, delta);
+        attrs[node.id] = this.editor.getViewAttr(node, delta);
       }
     });
 
     if (nodes.length > 0) {
-      await this.editor.update(nodes, attrs, this.senderId, true);
+      // sync = true, 因为group本身已经在queue里调用了
+      await this.editor.update(nodes, attrs, senderId, true);
       Object.values(nodes).map((node) => {
         const box = this.boxes[node.id];
         // update box

@@ -95,10 +95,6 @@ class Editor extends EventEmitter {
     this.player.toast(msg, durationInMs);
   }
 
-  async update(nodes, attrs, senderId, sync) {
-    return await this.player.update(nodes, attrs, senderId, sync);
-  }
-
   onTimeUpdate() {
     return (evt) => this.emit(RESIZE); // update
   }
@@ -178,6 +174,24 @@ class Editor extends EventEmitter {
     setTimeout(() => {
       selectControl.showSelect(node);
     }, 1);
+  }
+
+  getViewAttr(node, delta) {
+    const view = node.getView();
+    const attrs = {};
+    for (const [k, v] of Object.entries(delta)) {
+      // if (!v) continue; // 如果delta=0，就是没改变
+      if (k === 'scale') {
+        attrs[k] = view.relativeScale.x * (1 + v);
+      } else {
+        attrs[k] = view[k] + v;
+      }
+    }
+    return attrs;
+  }
+
+  async update(nodes, attrs, senderId, sync) {
+    return await this.player.update(nodes, attrs, senderId, sync);
   }
 
   destroy() {

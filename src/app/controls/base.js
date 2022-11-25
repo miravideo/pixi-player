@@ -70,12 +70,14 @@ class BaseControl extends EventEmitter {
     }
   }
 
-  getAttrs(delta) {
-    return delta;
+  getViewAttr(delta) {
+    return this.editor.getViewAttr(this.node, delta);
   }
 
-  async update(nodes, delta) {
-    return await this.editor.update(nodes, this.getAttrs(delta), this.box?.uuid || this.id); 
+  async update(delta, attrs={}) {
+    const senderId = `${this.box?.uuid}_${this.constructor.type}`;
+    Object.assign(attrs, this.getViewAttr(delta));
+    return await this.editor.update([this.node], attrs, senderId); 
   }
 
   destroy() {

@@ -45,7 +45,7 @@ class Rotate extends Move {
 
   async onMove(event) {
     if (!this.node || !this.box) return;
-    await this.update([this.node], this.getDelta(event));
+    await this.update(this.getDelta(event));
     this.box.rotate();
     this.toast(`${deg(this.box.rotation, 0)}°`, 1000);
   }

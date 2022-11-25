@@ -27,7 +27,7 @@ class Constraint extends BaseControl {
     this.wrap(this.selector, 'showSelect').after((args, selected) => {
       if (!selected) return; //  || !selected.visible || !selected.getAnchor
       this.updateConstraint();
-      this.createProxyNode(selected);
+      // this.createProxyNode(selected);
     });
 
     const $this = this;
@@ -93,6 +93,8 @@ class Constraint extends BaseControl {
 
   onMoveStart() {
     this.ref = {};
+    // 每次开始拖动的时候，都重置一下ProxyNode
+    this.createProxyNode(this.selector.selected);
   }
 
   onMove(op, evt) {
@@ -292,6 +294,7 @@ class Constraint extends BaseControl {
         this.selected.setConf(k, this.selected.getConf(k) + v);
       }
     }
+    if (this.debug_box) this.debug_box.fit(this.scale);
   }
 
   static minDist(a, b) {
