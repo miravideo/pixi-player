@@ -30,7 +30,6 @@ const VIEW_EVENTS = {
 };
 
 DisplayObject.mixin({
-  relativeScale: { x: 1.0, y: 1.0 },
   setBlur(blur) {
     if (isFinite(blur) && blur > 0) {
       if (this._blur) this._blur.blur = blur;
@@ -81,6 +80,7 @@ DisplayObject.mixin({
   },
   attr: function (attrs) {
     if (!this.id) this.id = Utils.genUuid();
+    if (!this.relativeScale) this.relativeScale = { x: 1.0, y: 1.0 };
     let scaleChanged = false;
     for (let key in attrs) {
       const val = attrs[key];
@@ -93,11 +93,9 @@ DisplayObject.mixin({
           }
           break;
         case "scale":
-          if (this.relativeScale) {
-            this.relativeScale.x = Array.isArray(val) ? val[0] : (Number(val) || 1.0);
-            this.relativeScale.y = Array.isArray(val) ? val[1] : (Number(val) || 1.0);
-            scaleChanged = true;
-          }
+          this.relativeScale.x = Array.isArray(val) ? val[0] : (Number(val) || 1.0);
+          this.relativeScale.y = Array.isArray(val) ? val[1] : (Number(val) || 1.0);
+          scaleChanged = true;
           break;
         case "skew":
           if (this.skew) {
@@ -115,8 +113,8 @@ DisplayObject.mixin({
           this[key] = val;
       }
     }
-    // 如果更改了这些值，需要重置initScale
     if (this.scale) {
+      // 如果更改了这些值，需要重置initScale
       if (attrs['absScale'] || attrs['width'] || attrs['height']) {
         this.initScale = { x: this.scale.x, y: this.scale.y };
         scaleChanged = true;

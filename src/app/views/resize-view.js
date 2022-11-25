@@ -4,6 +4,7 @@ require('../styles/resize.less');
 const MiraEditorRotate = require('./rotate-view');
 const { sum, arrMulti, norm2d, deg, dot, theta } = require('../utils/math');
 const Point = require('../utils/point');
+const SQ8 = 2.8284271247; // 8 ^ 0.5;
 
 class MiraEditorResize extends MiraEditorRotate {
   static TAG = 'mira-editor-resize';
@@ -69,16 +70,23 @@ class MiraEditorResize extends MiraEditorRotate {
     }
   }
 
-  constraint(delta, anchor=null) {
+  constraint(delta, anchor=null, useScaleForFixRatio=true) {
     const box = this.parentElement;
     // scale & rotate
     delta = new Point({ x: delta.x / box.scale, y: delta.y / box.scale });
     delta = delta.rotate(-box.rotation); // 逆变换为box转正的坐标系
+    if (!anchor) anchor = box.anchor;
 
     // constraint by w:h ratio
     if (this.fixRatio) {
       const direction = arrMulti(this.direction, [box.size.width, box.size.height]);
+      // distance = (delta • direction) / |direction|^2
+      //   = |delta| * |direction| * cos(θ) / |direction|^2
+      //   = |delta| * cos(θ) / |direction|
       const distance = dot(delta, direction) / Math.pow(norm2d(direction), 2);
+      // 根据控制点到锚点的距离，和对角线长度(SQ8)比值
+      const a = SQ8 / norm2d([this.direction[0] - (2 * anchor.x - 1), this.direction[1] - (2 * anchor.y - 1)]);
+      if (useScaleForFixRatio) return { scale: distance * a };
       delta = { x: direction[0] * distance, y: direction[1] * distance }
     }
 
@@ -88,7 +96,6 @@ class MiraEditorResize extends MiraEditorRotate {
 
     const size = { width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y };
     // delta of anchor position, should reverse rotate 变换为屏幕坐标系
-    if (!anchor) anchor = box.anchor;
     const anchorPoint = [anchor.x * size.width, anchor.y * size.height];
     const position = new Point(topLeft).offset(anchorPoint).rotate(box.rotation);
     return { ...position, ...size };

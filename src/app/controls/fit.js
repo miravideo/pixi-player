@@ -49,17 +49,17 @@ class Fit extends Move {
     // console.log('click!!', event.target);
     if (event.target.hasClass('fit')) {
       let to = {};
-      if (this.node.conf.width === '100vw' && this.node.conf.height === '100vh') {
-        // cover -> contain
-        const r = this.node.material.width / this.node.material.height;
-        const cr = this.node.player.width / this.node.player.height;
-        if (cr > r) to = { height: '100vh', width: null };
-        else to = { width: '100vw', height: null };
-      } else {
+      const r = this.node.material.width / this.node.material.height;
+      const cr = this.node.player.width / this.node.player.height;
+      // cover -> contain
+      if (cr > r) to = { height: '100vh', width: null };
+      else to = { width: '100vw', height: null };
+      if (this.node.conf.width == to.width || this.node.conf.height == to.height) {
         // contain/other -> cover
-        to = { width: '100vw', height: '100vh' };
+        if (cr > r) to = { width: '100vw', height: null };
+        else to = { height: '100vh', width: null };
       }
-      const attrs = { ...to, x: '50vw', y: '50vh', 'object-fit': 'cover' };
+      const attrs = { ...to, x: '50vw', y: '50vh', scale: 1.0, 'object-fit': 'cover' };
       // console.log(delta.to, [this.node.conf.width, this.node.conf.height]);
       await this.editor.update([this.node], attrs, this.box.uuid);
       this.box.resize();

@@ -13,8 +13,9 @@ const DEFAULT_OPTS = {
   majorColor: '#1FB0F9', selectedColor: '#1FB0F9', highlightColor: '#B2B5B6',
   cropColor: '#E33', refLineColor: '#F8DD0B',
   textSelectionColor: '#7FD4FF', textCursorColor: '#EFEFEF',
-  refLineRange: 10, canvasMarginRef: 30,
+  refLineRange: 10, canvasMarginRef: 0,
   enableCanvasConstraint: true,
+  debugCanvasConstraint: false,
 };
 
 /**
@@ -153,8 +154,12 @@ class Editor extends EventEmitter {
     if (hide) this.emit(SELECT);
   }
 
+  get rootNode() {
+    return this.player.core.rootNode;
+  }
+
   get nodes() {
-    return this.player.core.rootNode.allNodes;
+    return this.rootNode.allNodes;
   }
 
   canCropFrame(node) {

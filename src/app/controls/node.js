@@ -97,6 +97,11 @@ class Node extends EventEmitter {
     this._size.h = v;
   }
 
+  applyScale(scale) {
+    this.width *= scale;
+    this.height *= scale;
+  }
+
   getXY() {
     return this.metrcs().position;
   }

@@ -1,7 +1,7 @@
 'use strict';
 
 const { CHANGING, RESIZE, MAX } = require('../utils/static');
-const { dmap } = require('../utils/data');
+const { dmap, uuid } = require('../utils/data');
 const { deg, rad } = require('../utils/math');
 const Rect = require('../utils/rect');
 const BaseControl = require('./base');
@@ -13,6 +13,8 @@ const MiraEditorBox = require('../views/select-view');
 
 const CANVAS = 'canvas';
 const MULTI_KEYS = ['Shift'];
+const TYPES = ['image', 'video', 'text', 'mixin'];
+
 class Constraint extends BaseControl {
   constructor(editor) {
     super(editor);
@@ -23,9 +25,9 @@ class Constraint extends BaseControl {
 
     // add hook
     this.wrap(this.selector, 'showSelect').after((args, selected) => {
-      if (!selected || !selected.visible || !selected.getAnchor) return;
-      this.createProxyNode(selected);
+      if (!selected) return; //  || !selected.visible || !selected.getAnchor
       this.updateConstraint();
+      this.createProxyNode(selected);
     });
 
     const $this = this;
@@ -34,6 +36,9 @@ class Constraint extends BaseControl {
       this.wrap(editor.controls[op], 'onMoveStart').after(() => $this.onMoveStart());
       this.wrap(editor.controls[op], 'onMove').before(args => [$this.onMove(op, args[0])]);
       this.wrap(editor.controls[op], 'onMoveEnd').after(() => $this.onMoveEnd());
+      this.wrap(editor.controls[op], 'update').after(() => {
+        if ($this.debug_box) $this.debug_box.fit(this.scale);
+      });
     }
   }
 
@@ -96,7 +101,7 @@ class Constraint extends BaseControl {
     this.limit = evt.event.shiftKey ? this.scale : this.editor.opts.refLineRange;
     const control = this.editor.controls[op];
     const delta = control.getDelta(evt);
-    BaseControl.apply(this.selected, delta, 'proxy');
+    this.update(delta);
     if (typeof this[op] === 'function') this[op].call(this, evt, delta);
     return evt;
   }
@@ -114,25 +119,23 @@ class Constraint extends BaseControl {
       const { ctr, scale } = this;
       if (this.debug_box) this.debug_box.remove();
       this.debug_box = MiraEditorBox.create({ node: this.selected, container: ctr, scale }).addClass('mirae-debug-box');
-      this.selected.on(CHANGING, () => this.debug_box.fit(scale));
+      // this.selected.on(CHANGING, () => this.debug_box.fit(scale));
     }
   }
 
   updateConstraint() {
     this.initContainer();
-    const target = this.selector.recordTarget();
+    const target = this.selector.selected;
     if (!target) return;
-    const targetIds = !Array.isArray(target) ? [target.id] : target.map(t => t.id);
+    const targetIds = target.nodes ? Object.values(target.nodes).map(t => t.id) : [target.id];
     const nodes = Object.values(this.editor.nodes).filter(node => {
-      return !targetIds.includes(node.id) && node.visible;
+      return !targetIds.includes(node.id) && TYPES.includes(node.type) && node.onTime();
     });
+    const { width, height } = this.editor.rootNode;
+    this.canvas = Rect.from({ width, height }).expand(-this.editor.opts.canvasMarginRef);
+    this.refBounds[CANVAS] = this.canvas; // 优先吸附canvas
     for (const node of nodes) {
-      if (node.type === 'creator') { // canvas
-        const conf = { w: node.getConf('width'), h: node.getConf('height') };
-        this.canvas = this.refBounds[CANVAS] = Rect.from(conf).expand(-this.editor.opts.canvasMarginRef);
-      } else if (node.getAnchor) {
-        this.refBounds[node.id] = MiraEditorBox.create({node}).bounds();
-      }
+      this.refBounds[node.id] = MiraEditorBox.create({node}).bounds();
     }
   }
 
@@ -140,7 +143,7 @@ class Constraint extends BaseControl {
     if (!this._resizeTarget || this._resizeTarget != evt.target) {
       this._resizeTarget = evt.target; // resize点更换之后，刷新虚拟node
       this.createProxyNode(this.selector.selected);
-      BaseControl.apply(this.selected, delta, 'proxy'); // 必须要apply一下，不然虚拟node就delay了
+      this.update(delta); // 必须要apply一下，不然虚拟node就delay了
     }
 
     const rect = this.selected.bounds();
@@ -182,18 +185,15 @@ class Constraint extends BaseControl {
   }
 
   rotate(evt) {
-    const rotation = deg(this.selected.getRotation(), 2);
+    const rotation = deg(this.selected.rotation, 2);
     const node = this.selector.selected;
     const to = Math.round(rotation / 90) * 90;
     const k = (to % 180 === 0) ? 'x' : 'y';
     if (Math.abs(rotation % 90) < this.limit * 0.5) {
       const refKey = `rot_${to}`;
-      evt.delta = { x: 0, y: 0 };
+      evt.delta = { x: 0, y: 0 }; // 比较难计算，直接设置了
       if (!this.ref[k] || this.ref[k] !== refKey) {
-        const to_rad = rad(to);
-        const time = node.player.currentTime / 1000;
-        node.setRotate(to_rad);
-        node.emit(CHANGING, { action: Rotate.type , delta: to_rad - node.getRotation(), time });
+        this.editor.update([node], { rotation: rad(to) }, this.selector.selectedBox.uuid);
         this.ref[k] = refKey;
         const anchor = this.selector.selectedBox.position;
         const rect = this.selected.bounds().expand(30); // 参考线从边框出头一些
@@ -281,6 +281,17 @@ class Constraint extends BaseControl {
     this.ctr = null;
     if (this.debug_box) this.debug_box.remove();
     this.debug_box = null;
+  }
+
+  update(delta) {
+    for (const [k, v] of Object.entries(delta)) {
+      if (!v) continue; // 如果delta=0，就是没改变
+      if (k === 'scale') {
+        this.selected.applyScale(1 + v);
+      } else {
+        this.selected.setConf(k, this.selected.getConf(k) + v);
+      }
+    }
   }
 
   static minDist(a, b) {

@@ -163,7 +163,11 @@ class Move extends BaseControl {
     const attrs = {};
     for (const [k, v] of Object.entries(delta)) {
       if (!v) continue; // 如果delta=0，就是没改变
-      attrs[k] = nodeView[k] + v;
+      if (k === 'scale') {
+        attrs[k] = nodeView.relativeScale.x * (1 + v);
+      } else {
+        attrs[k] = nodeView[k] + v;
+      }
     }
     return attrs;
   }
@@ -185,7 +189,8 @@ class Move extends BaseControl {
       }
       return;
     }
-
+    // 只要开始移动了，就退出multi模式，不然可能会hover自己
+    if (event.moved) this.selector.enableMulti(false);
     await this.update([this.node], this.getDelta(event));
     this.box.move();
     const { x: pX, y: pY } = round(this.box.position, 0);

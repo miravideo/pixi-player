@@ -87,7 +87,7 @@ class Crop extends Move {
 
   getDelta(event) {
     if (event.target.constraint) {
-      return event.target.constraint(event.delta);
+      return event.target.constraint(event.delta, null, false);
     } else {
       return super.getDelta(event); // Move.getDelta
     }

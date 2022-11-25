@@ -4,7 +4,7 @@ require('../styles/select.less');
 const MiraEditorBase = require('./base-view');
 const Point = require('../utils/point');
 const Rect = require('../utils/rect');
-const { floor, ceil, round, deg, theta, rotate, arrMulti } = require('../utils/math');
+const { floor, ceil, round, deg, theta, arrMulti, norm2d } = require('../utils/math');
 
 class MiraEditorBox extends MiraEditorBase {
   static TAG = 'mira-editor-box';
@@ -108,32 +108,32 @@ class MiraEditorBox extends MiraEditorBase {
 
   refreshHandle() {
     const ctr = this.parentNode;
-    if (!this.handleBox || !ctr || !ctr?.classList.contains('mira-editor')) return this;
-    const rootRect = this.parentNode.getBoundingClientRect();
-    const boxCenter = this.getBoundingClientRect().center;
-    const p = boxCenter.rebase(rootRect.center);
-    let pos = 'left';
-    // 避免居中对齐的元素resize时带来控件位置跳动
-    if (Math.abs(p.x) + Math.abs(p.y) > 10) {
-      const θ1 = deg(theta(p, { x: rootRect.width, y: rootRect.height }) - this.rotation);
-      const θ2 = deg(theta(p, { x: rootRect.width, y: - rootRect.height }) - this.rotation);
-      // console.log(p, θ1, θ2);
-      if (θ1 < 0 && θ2 < 0) {
-        pos = 'top';
-      } else if (θ1 < 0 && θ2 > 0) {
-        pos = 'right';
-      } else if (θ1 > 0 && θ2 < 0) {
-        pos = 'left';
-      } else {
-        pos = 'bottom';
-      }
-    }
+    if (!this.handleBox || !ctr) return this;
+    const { width, height } = this.node.player;
+    const center = { x: width / 2, y: height / 2 };
+    // 计算4条边的中心点，哪个距离root中心最近
+    const { width: w, height: h } = this.size;
+    const left = - w * this.anchor.x;
+    const top = - h * this.anchor.y;
+    const points = [ [ left, 0 ], [ 0, top ], [ 0, top + h ], [ left + w, 0 ] ];
+    const dists = points.map(pt => {
+      const p = (new Point(pt)).rotate(this.rotation).offset(this.position);
+      return norm2d([p.x - center.x, p.y - center.y]);
+    });
 
-    if (!this.handleBox.classList.contains(pos)) {
-      this.handleBox.classList.remove('left', 'right', 'top', 'bottom');
-      this.handleBox.classList.add(pos);
-      this.setRotate(); // update rotate cursor
-    }
+    const short = Math.min(w, h); // 短边
+    dists[2] -= short * 0.1; // 相比top, 优先bottom, 因下方控件空间更多 (没有考虑转了超过90度的情况)
+    const minDist = Math.min(...dists);
+    const minIdx = dists.indexOf(minDist);
+
+    const classList = this.handleBox.classList;
+    const positions = [ 'left', 'top', 'bottom', 'right' ];
+    const idx = positions.map(p => classList.contains(p)).findIndex(x => x);
+    // 如果当前控件点距离跟最小距离的差，小于短边一半，就暂时不改，避免跳动
+    if (idx === minIdx || (dists[idx] - minDist) / short < 0.5) return this;
+    classList.remove(...positions);
+    classList.add(positions[minIdx]);
+    this.setRotate(); // update rotate cursor
     return this;
   }
 

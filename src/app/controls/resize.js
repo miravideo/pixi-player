@@ -30,7 +30,7 @@ class Resize extends Move {
       bottomRight: { pos: BOTTOM | RIGHT, styleClass: 'dot' },
       bottomLeft:  { pos: BOTTOM | LEFT,  styleClass: 'dot' },
     };
-    if (this.node.conf.resizeScaleOnly || this.node.type === 'richtext') return SCALE_CTLS;
+    if (['image', 'video'].includes(this.node.type)) return SCALE_CTLS;
     const SKEW_CTLS = {
       left:  { pos: LEFT,  styleClass: 'ver' },
       right: { pos: RIGHT, styleClass: 'ver' },
@@ -61,7 +61,8 @@ class Resize extends Move {
   }
 
   getDelta(event) {
-    return event.target.constraint(event.delta);
+    const useScaleForFixRatio = ['image', 'video'].includes(this.node.type); // , 'text'
+    return event.target.constraint(event.delta, null, useScaleForFixRatio);
   }
 
   async onMove(event) {
