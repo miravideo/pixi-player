@@ -48,6 +48,8 @@ export class Record extends EventEmitter {
       else throw new Error('invalid node');
     }
 
+    // todo: get from player
+    let rootNode = nodes[0].root();
     let changed = false;
     const updates = nodes.map(async (node) => {
       const _attrs = attrs[node.id] || attrs;
@@ -77,8 +79,8 @@ export class Record extends EventEmitter {
 
     if (changed) {
       // todo: 某些时候（新增/删除/时间改动/zIndex改动），需要重新annotate
-      // const player = nodes[0].player;
-      // player.annotate();
+      if (!rootNode) rootNode = nodes[0].root();
+      rootNode.annotate();
     }
 
     return changed;

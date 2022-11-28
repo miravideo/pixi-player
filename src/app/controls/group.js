@@ -22,7 +22,11 @@ class NodeGroup extends Node {
   }
 
   get player() {
-    return Object.values(this.nodes)[0].player;
+    return this.editor.player.core;
+  }
+
+  root() {
+    return this.editor.rootNode;
   }
 
   initContainer() {

@@ -220,8 +220,7 @@ class Editor extends EventEmitter {
       // init mixin!!!
       await this.player.core.initMixin(src.mixinType, node);
     }
-    if (node.initMixin) 
-    node.parent = src.parent; // tmp parent, just set for annotate
+    node.parent = src.parent; // tmp parent, just set for annotateconsole.log('annotate', node.id, node.parent);
     if (src.cachedFontFamily) node.cachedFontFamily = src.cachedFontFamily; // todo: font
     node.copySourceId = src.id;
     node.trackId = src.trackId;
@@ -229,6 +228,7 @@ class Editor extends EventEmitter {
     if (src.groupId) node.conf.groupId = md5(`${src.groupId}_copy`);
     await node.preload();
     node.annotate();
+    if (!node.zIndex) node.zIndex = src.zIndex;
     node.parent = null; // remove tmp parent..
     return node;
   }

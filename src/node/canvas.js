@@ -64,7 +64,7 @@ class Canvas extends Container {
     const walkzIndex = (node) => {
       node.children.map(x => {
         x.zIndex = x.basezIndex + (zIndex++);
-        this.maxzIndex = Math.max(x.zIndex, this.maxzIndex);
+        // if (!x.conf.zIndex) x.conf.zIndex = x.zIndex;
         walkzIndex(x);
       });
     }
@@ -84,7 +84,7 @@ class Canvas extends Container {
   }
 
   annotate() {
-    this.initzIndex(); // 重新刷一下zIndex
+    // this.initzIndex(); // 重新刷一下zIndex
     const spine = this.children.filter(x => x.type === 'spine')[0];
     spine.annotate(); // 必须重新annotate，确保正确
     let maxEndTime = spine.duration;
@@ -101,7 +101,6 @@ class Canvas extends Container {
     // 可能有child依赖于此, 需要再annotate一下
     this.allNodes.map(node => {
       node.annotate();
-      this.maxzIndex = Math.max(node.zIndex, this.maxzIndex);
     });
 
     // 更新一下显示
