@@ -12,6 +12,10 @@ import STATIC from './static';
 
 const FFT_SIZE = 4096;
 
+import UAParser from 'ua-parser-js';
+const BROWSER = new UAParser().getBrowser();
+const SUPPORTED = false && ['Edge', 'Chrome'].includes(BROWSER.name) && BROWSER.major >= 104 && typeof VideoEncoder !== "undefined";
+
 class Player extends EventEmitter {
   constructor(opts={}) {
     super();
@@ -29,6 +33,19 @@ class Player extends EventEmitter {
   }
 
   async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view}) {
+    if (!SUPPORTED) {
+      let msg = `Could not find VideoEncoder! Please use Chrome (104+)`;
+      if (!['Edge', 'Chrome'].includes(BROWSER.name)) {
+        msg = `Please open in Edge/Chrome with version 104+`;
+      } else if (BROWSER.major < 104) {
+        msg = `Browser version(${BROWSER.major}) too old, should 104+`;
+      }
+      // for resolution x2
+      view.width = view.width * 2;
+      view.height = view.height * 2;
+      return this.error(view, msg);
+    }
+
     // onprogress
     let cacheRate = 0;
     let progress = 0;
@@ -200,7 +217,7 @@ class Player extends EventEmitter {
   }
 
   get duration() {
-    return this.rootNode.duration;
+    return this.rootNode ? this.rootNode.duration : 0;
   }
 
   async play() {
@@ -248,11 +265,11 @@ class Player extends EventEmitter {
   }
 
   get width() {
-    return this.app.view.width;
+    return this.app?.view.width || this._viewWidth;
   }
 
   get height() {
-    return this.app.view.height;
+    return this.app?.view.height || this._viewHeight;
   }
 
   get queue() {
@@ -483,6 +500,24 @@ class Player extends EventEmitter {
 
   toJson(asTemplate=false) {
     return this.rootNode.toJson(asTemplate);
+  }
+
+  error(canvas, msg) {
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const fontSize = Math.round(Math.min(canvas.width * 1.5 / Array.from(msg).length, canvas.height/ 5));
+    ctx.font = `${fontSize}px Arial`;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(msg, canvas.width / 2, (canvas.height / 2) + 20);
+    ctx.font = `50px Arial`;
+    ctx.fillStyle = '#FF0000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚠️', canvas.width / 2, (canvas.height / 2) - 30);
+    [this._viewWidth, this._viewHeight] = [canvas.width, canvas.height];
   }
 
   destroy() {
