@@ -74,6 +74,13 @@ export class Record extends EventEmitter {
       }
     });
     await Promise.all(updates);
+
+    if (changed) {
+      // todo: 某些时候（新增/删除/时间改动/zIndex改动），需要重新annotate
+      // const player = nodes[0].player;
+      // player.annotate();
+    }
+
     return changed;
   }
 

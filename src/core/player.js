@@ -32,6 +32,10 @@ class Player extends EventEmitter {
     this.lastTime = 0;
   }
 
+  async initMixin(type, node) {
+    await node.initMixin(type, Builder.mixin[type]);
+  }
+
   async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view}) {
     if (!SUPPORTED) {
       let msg = `Could not find VideoEncoder! Please use Chrome (104+)`;
@@ -100,19 +104,7 @@ class Player extends EventEmitter {
     }
 
     // annotate
-    this.rootNode.annotate();
-    // allNodes需要重新计算，因为可能mixin.preload之后又有添加
-    this.rootNode.allNodes.map(node => {
-      node.annotate();
-      this.log(
-        `annotate ${node.id.padEnd(10, ' ')}: ` +
-        `show:[${node.absStartTime.toFixed(2).padStart(6, ' ')}, ${node.absEndTime.toFixed(2).padStart(6, ' ')})  ` +
-        (!isNaN(node.absDrawStartTime) ? `draw:[${node.absDrawStartTime.toFixed(2).padStart(6, ' ')}, ${node.absDrawEndTime.toFixed(2).padStart(6, ' ')})  ` : '') +
-        `duration:${node.duration.toFixed(0).padStart(6, ' ')}  ` +
-        `zIndex:${(isNaN(node.zIndex) ? -1 : node.zIndex).toFixed(0).padStart(8, ' ')}`
-      );
-    });
-    this.rootNode.annotate(); //again
+    this.annotate();
 
     // add view
     const rootView = this.rootNode.getView(0, STATIC.VIEW_TYPE_SEEK);
@@ -167,6 +159,23 @@ class Player extends EventEmitter {
     this.emit('loadedmetadata', {
       duration: this.duration, width: this.width, height: this.height
     });
+  }
+
+  annotate() {
+    // annotate
+    this.rootNode.annotate();
+    // allNodes需要重新计算，因为可能mixin.preload之后又有添加
+    this.rootNode.allNodes.map(node => {
+      node.annotate();
+      this.log(
+        `${node.id.padEnd(20, ' ')}: ` +
+        `show:[${node.absStartTime.toFixed(2).padStart(6, ' ')}, ${node.absEndTime.toFixed(2).padStart(6, ' ')})  ` +
+        (!isNaN(node.absDrawStartTime) ? `draw:[${node.absDrawStartTime.toFixed(2).padStart(6, ' ')}, ${node.absDrawEndTime.toFixed(2).padStart(6, ' ')})  ` : '') +
+        `duration:${node.duration.toFixed(0).padStart(6, ' ')}  ` +
+        `zIndex:${(isNaN(node.zIndex) ? -1 : node.zIndex).toFixed(0).padStart(8, ' ')}`
+      );
+    });
+    this.rootNode.annotate(); //again
   }
 
   async resize(width, height) {

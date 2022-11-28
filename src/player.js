@@ -6,6 +6,7 @@ import { History, Record } from "./app/history";
 import Utils from "./app/utils";
 import Queue from "./util/queue";
 import Editor from "./app/editor";
+import { uuid } from "./app/utils/data";
 
 class PlayerUI {
   constructor(container, options) {
@@ -119,6 +120,7 @@ class PlayerUI {
 
   async update(nodes, attrs, senderId, sync) {
     return this._queuedUpdate(async () => {
+      senderId = senderId || uuid();
       let record = new Record(senderId);
       const changed = await record.update(nodes, attrs);
       // return the last record merged this one

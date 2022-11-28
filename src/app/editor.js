@@ -216,6 +216,11 @@ class Editor extends EventEmitter {
 
   async cloneNode(src) {
     const node = new src.constructor({...src.conf, refId: null, id: null});
+    if (src.type === 'mixin' && src.mixinType) {
+      // init mixin!!!
+      await this.player.core.initMixin(src.mixinType, node);
+    }
+    if (node.initMixin) 
     node.parent = src.parent; // tmp parent, just set for annotate
     if (src.cachedFontFamily) node.cachedFontFamily = src.cachedFontFamily; // todo: font
     node.copySourceId = src.id;

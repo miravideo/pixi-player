@@ -11,7 +11,7 @@ const CacheUtil = {
     if (type === 'text' && fontUrl.startsWith('http') && (force || preload !== false)) { // default preload=true
       const { url } = await XhrUtil.getCachedURL(fontUrl, cid, progress);
       node.conf.cachedFont = url;
-    } else if (['image', 'gif'].includes(type) && source && (force || preload)) { // default preload=true
+    } else if (['image', 'gif'].includes(type) && source && (force || preload)) { // default preload=false
       const { url, type } = await XhrUtil.getCachedURL(source, cid, progress);
       node.conf.cachedSrc = url;
       node.conf.srcType = CacheUtil.contentType(type);

@@ -27,7 +27,7 @@ class Container extends Display {
   }
 
   updatezIndex() {
-    for (view of Object.values(this._views)) {
+    for (const view of Object.values(this._views)) {
       view.sortDirty = true;
     }
   }
