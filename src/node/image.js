@@ -10,6 +10,7 @@ class Image extends Display {
   }
 
   async preload(onprogress) {
+    if (this.material) this.material.destroy();
     this.material = this.createMaterial();
     await this.material.init(onprogress);
   }

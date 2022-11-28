@@ -63,7 +63,15 @@ export class Record extends EventEmitter {
         changed = nodeChanged = true;
       }
       if (nodeChanged) {
-        // todo: 修改了src/font等属性，需要重新preload!
+        if (changeAttr['src'] && ['video', 'image', 'audio'].includes(node.type)) {
+          node.clearViewCache();
+          node.conf.cachedSrc = undefined;
+          // todo: loading progress
+          await node.preload();
+        }
+
+        // todo: change font reload
+
         // todo: 不能随便清view缓存，否则会不断的新建view，绑定事件
         // node.clearViewCache();
         await node.updateView(this.senderId);

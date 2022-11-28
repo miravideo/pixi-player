@@ -11,6 +11,7 @@ class Audio extends Clip {
   }
 
   async preload(onprogress) {
+    if (this.material) this.material.destroy();
     this.material = new AudioMaterial(this);
     await this.material.init(onprogress);
   }
