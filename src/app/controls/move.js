@@ -1,10 +1,10 @@
 'use strict';
 
-const { CHANGING, SELECT, OP_CHANGE } = require('../utils/static');
+const { SELECT, RESIZE, KEYDOWN, KEYUP, HISTORY } = require('../utils/static');
 const MiraEditorMove = require('../views/move-view');
 const BaseControl = require('./base');
 const { arrMulti, round } = require('../utils/math');
-const { dmap } = require('../utils/data');
+const { dmap, uuid } = require('../utils/data');
 const Point = require('../utils/point');
 
 const MIN_MOVE_SIZE = 50;
@@ -48,8 +48,11 @@ class Move extends BaseControl {
   }
 
   events() {
-    const evts = { keydown: this.onKeyDown(), keyup: this.onKeyUp() };
-    if (this.constructor.type === 'move') evts[SELECT] = this.onSelect();
+    const evts = { [KEYDOWN]: this.onKeyDown(), [KEYUP]: this.onKeyUp() };
+    if (this.constructor.type === 'move') {
+      evts[SELECT] = this.onSelect();
+      evts[HISTORY] = () => this.editMode && this.onTextChange();
+    }
     return evts;
   }
 
@@ -63,12 +66,9 @@ class Move extends BaseControl {
           return this.updateText(this.node.delete());
         } else if (evt.key === 'Escape') {
           return this.remove();
-        } else if (evt.key.toLowerCase() === 'z' && evt.mctrlKey) {
+        } else if (['z', 'y'].includes(evt.key.toLowerCase()) && evt.mctrlKey) {
+          // undo/redo，避免应用到textarea里影响text
           evt.preventDefault();
-          return this.opHistory(evt.shiftKey);
-        } else if (evt.key.toLowerCase() === 'y' && evt.mctrlKey) {
-          evt.preventDefault();
-          return this.opHistory(true);
         } else if (evt.key.toLowerCase() === 'c' && evt.mctrlKey) {
           return this.copyText();
         } else if (evt.key.toLowerCase() === 'x' && evt.mctrlKey) {
@@ -87,15 +87,12 @@ class Move extends BaseControl {
 
   onKeyUp() {
     return (evt) => {
-      if (this.constructor.type !== 'move') return;
-      if (this.constructor.KEY_MAP[evt.key] && this.node && !this.editMode) {
-        this.node.emit(CHANGING, {action: `${this.constructor.type}end`});
-      }
+      // if (this.constructor.type !== 'move') return;
     }
   }
 
-  setNode() {
-    this.node = this.selector.selected;
+  setNode(node) {
+    this.node = node || this.selector.selected;
     return this;
   }
 
@@ -206,6 +203,22 @@ class Move extends BaseControl {
   onDblClick(event) {
     // 双击进入文本编辑状态
     if (this.node?.type === 'text') this.textEditStart(event);
+    else if (this.node?.type === 'group') { // group之后，进入文字编辑
+      const { left, top } = this.editor.container.getBoundingClientRect();
+      const ep = (new Point(event.position)).rebase([left, top]).scale(1/this.box.scale);
+      for (const [nodeId, box] of Object.entries(this.node.boxes)) {
+        // todo: 暂时只支持双击编辑文字, 以后可能会更换素材之类的
+        if (this.node.nodes[nodeId]?.type !== 'text') continue;
+        const { x, y } = ep.rebase(box.points()[0]).rotate(-box.rotation);
+        if (0 < x && x < box.size.width && 0 < y && y < box.size.height) {
+          // console.log('in box!', nodeId, {x, y}, box.size);
+          // todo: 如果有多个，暂时也只支持选第一个编辑
+          this.setNode(this.node.nodes[nodeId]).appendControl(box).show();
+          this.textEditStart(event);
+          break;
+        }
+      }
+    }
   }
 
   textEditStart(event) {
@@ -218,6 +231,7 @@ class Move extends BaseControl {
     this.selector.hideHover();
     this.selector.enableMulti(false); // 为了触发其他控件的show
     this.textSelect(event); // init cursor
+    this._textSenderId = uuid(); // 每次新起一个senderId
   }
 
   textSelect(event) {
@@ -260,10 +274,11 @@ class Move extends BaseControl {
     this.textView.focus();
     this.cursorView.classList.remove('mirae-text-cursor-flash');
     this.lock(500, () => {
-      this.cursorView.classList.add('mirae-text-cursor-flash');
+      // 0.5秒之后再开始闪
+      this.cursorView && this.cursorView.classList.add('mirae-text-cursor-flash');
     }, 'cursor');
 
-    this.editor.enableKeyboard(false);
+    // this.editor.enableKeyboard(false);
   }
 
   onCompStart(e) {
@@ -293,19 +308,25 @@ class Move extends BaseControl {
     this.clearTextValue();
   }
 
-  async updateText(to, add) {
+  async updateText(to, inputString) {
     if (to.text === this.node.text) return; // not change
+    const isDel = !inputString;
+    if (this._lastTextOp !== isDel || inputString?.includes('\n')) {
+      this._lastTextOp = isDel;
+      this._textSenderId = uuid(); // 新起一条历史
+    }
+    await this.editor.update([this.node], to, this._textSenderId);
+    this.onTextChange(to.cursorIndex);
+    this.lock(500, null, 'updateText'); // 避免刚刚updateText完，cursor未更新又触发了select
+  }
 
-    await this.editor.update([this.node], to, this.id);
+  onTextChange(cursorIndex) {
+    if (cursorIndex === undefined) cursorIndex = this.node.getConf('cursorIndex');
     // 要等text更新好之后再更新一遍cursorIndex，才能设置成正确的坐标位置
-    this.node.setConf('cursorIndex', to.cursorIndex);
-
-    // const record = new Record(OP_CHANGE, this.node, delta);
-    // record.editType = add ? 'add' : 'del';
-    // if (add?.includes('\n')) this.record = null; // 有新行，就新起一条历史
+    this.node.setConf('cursorIndex', cursorIndex);
     this.box.resize(); // 文字变动之后应该框的大小也会变
     this.updateCursor();
-    this.lock(500, null, 'updateText');
+    this.editor.emit(RESIZE, {}); // 框大小改变之后，可能也涉及到group选择的框大小改变
   }
 
   copyText() {
@@ -321,13 +342,6 @@ class Move extends BaseControl {
     return this._controls?.move;
   }
 
-  opHistory(redo=true) {
-    const func = redo ? 'redo' : 'undo';
-    this.editor[func](1, false);
-    this.box.resize(); // 文字变动之后应该框的大小也会变
-    this.updateCursor();
-  }
-
   remove() {
     if (this.constructor.type !== 'move') return;
     if (this.view) this.view.remove();
@@ -337,7 +351,7 @@ class Move extends BaseControl {
     if (this.editMode) {
       this.node.editMode = false;
       this.node.selectClean();
-      this.editor.enableKeyboard(true);
+      // this.editor.enableKeyboard(true);
       this.selector.enableMulti(false); // 为了触发其他控件的show
     }
   }

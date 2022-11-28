@@ -73,7 +73,7 @@ class MiraClipView extends MiraEditorBase {
     if (!this.node || !this.node.parent) return;
     let info = '';
     if (this.name) info += `${this.name} `;
-    if (this.node.groupId && this.node.groupId !== 'NULL') info += '(已组合) ';
+    if (this.node.groupId) info += '(已组合) ';
     if (this.node.rootConf) {
       info += ' - 时长: ' + secToHms(this.node.duration, 1, true);
     }

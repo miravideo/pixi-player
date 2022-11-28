@@ -54,7 +54,7 @@ export class Record extends EventEmitter {
       let changeAttr = {}, nodeChanged = false;
       for (const [k, to] of Object.entries(_attrs)) {
         const from = node.getConf(k, false); // raw data, without unit parse
-        // console.log('setConf', node.id, {k, from, to});
+        // console.log('setConf', node.id, {k, from, to, save});
         if (from === to) continue; // not change
         changeAttr[k] = { from, to };
         node.setConf(k, to); // autounit = true

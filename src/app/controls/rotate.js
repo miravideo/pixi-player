@@ -26,15 +26,15 @@ class Rotate extends Move {
   updateShow(box) { }
 
   getDelta(event) {
-    if (!this.boxCenter) {
+    if (!this.boxAnchor) {
       const { left, top } = this.editor.container.getBoundingClientRect();
       let { x, y } = this.box.position;
       x = x * this.box.scale + left;
       y = y * this.box.scale + top;
-      this.boxCenter = { x, y };
+      this.boxAnchor = { x, y };
     }
 
-    const { x, y } = this.boxCenter;
+    const { x, y } = this.boxAnchor;
     const to   = { x: event.position.x - x, y: event.position.y - y };
     const from = { x: to.x - event.delta.x, y: to.y - event.delta.y };
     let delta = Math.acos(dot(from, to) / (norm2d(from) * norm2d(to)));
@@ -52,7 +52,7 @@ class Rotate extends Move {
 
   onMoveEnd(event) {
     if (!super.onMoveEnd(event)) return;
-    this.boxCenter = null;
+    this.boxAnchor = null;
     this.toast('', 0);
   }
 }

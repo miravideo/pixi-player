@@ -145,6 +145,11 @@ class Clip extends EventEmitter {
     return this.root()?.player;
   }
 
+  get parents() {
+    if (!this.parent || !this.parent.parents) return [];
+    return [...this.parent.parents, this.parent];
+  }
+
   static extends(mixin) {
     PluginUtil.extends({plugin: mixin, to: this});
   }
@@ -256,6 +261,10 @@ class Clip extends EventEmitter {
 
   get covers() {
     return this._covers || [];
+  }
+
+  get groupId() {
+    return this.conf.groupId;
   }
 
   createView() {}

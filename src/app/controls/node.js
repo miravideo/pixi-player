@@ -26,7 +26,7 @@ class Node extends EventEmitter {
   }
 
   groupSelect(node) {
-    if (!node.groupId || node.groupId == 'NULL' || !this.nodes) return false;
+    if (!node.groupId || !this.nodes) return false;
     node.root().allNodes.map(n => {
       if (n.groupId === node.groupId) this.nodes[n.id] = n;
     });

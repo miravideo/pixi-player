@@ -1,7 +1,7 @@
 'use strict';
 
 const { uuid } = require('../utils/data');
-const { HOVER, SELECT, CHANGING, CHANGED, RESIZE, MAX, KEYDOWN, KEYUP } = require('../utils/static');
+const { HOVER, SELECT, HISTORY, RESIZE, MAX, KEYDOWN, KEYUP } = require('../utils/static');
 const MiraEditorBox = require('../views/select-view');
 const BaseControl = require('./base');
 const NodeGroup = require('./group');
@@ -30,6 +30,7 @@ class Select extends BaseControl {
       [RESIZE]: this.onResize(), 
       [SELECT]: this.onSelect(),
       [HOVER]: this.onHover(), 
+      [HISTORY]: this.onHistoryChange(),
     };
   }
 
@@ -73,6 +74,17 @@ class Select extends BaseControl {
     }
   }
 
+  onHistoryChange() {
+    return (evt) => {
+      if (!Array.isArray(evt.records) || !evt.records.length || this.editor.controls.move.editMode) return;
+      this.hideHover();
+      const nodes = evt.records[0].nodes;
+      let node = nodes.length > 1 ? new NodeGroup(this.editor, nodes) : nodes[0];
+      if (node.groupId) node = this.multiSelect(node);
+      this.showSelect(node);
+    }
+  }
+
   enableMulti(enable) {
     // 这个方法是给hook用的, 比如在多选状态下，隐藏move控件，可以再多选到背景挡住的元素
     this.withMulti = enable;
@@ -97,14 +109,17 @@ class Select extends BaseControl {
       //   return;
       // }
       let selected;
-      if (this.withMulti || evt.action === 'multi' || (node && node.groupId && node.groupId != 'NULL')) {
+      if (this.withMulti || evt.action === 'multi') {
+        selected = this.selected; // 用已经选中的作为初始
         if (Array.isArray(evt.nodes) && evt.nodes.length > 0) {
           for (const n of evt.nodes) {
             selected = this.multiSelect(n, selected);
           }
         } else {
-          selected = this.multiSelect(node);
+          selected = this.multiSelect(node, selected);
         }
+      } else if (node && node.groupId) {
+        selected = this.multiSelect(node);
       } else {
         selected = node;
       }
@@ -113,17 +128,17 @@ class Select extends BaseControl {
   }
 
   multiSelect(node, selected) {
-    selected = selected || this.selected;
-    if (!node?.type || node.type === 'creator') return;
+    if (!node?.type || node.type === 'canvas') return;
     if (selected instanceof NodeGroup) {
       return selected.toggleNode(node);
     }
-    if (node.groupId && node.groupId !== 'NULL') {
-      return new NodeGroup(this.editor, node);
+    let groupNode;
+    if (node.groupId) {
+      groupNode = new NodeGroup(this.editor, node);
     } else if (selected && selected.id !== node.id) {
-      return new NodeGroup(this.editor, [selected, node]);
+      groupNode = new NodeGroup(this.editor, [selected, node]);
     }
-    return node;
+    return (groupNode && Object.values(groupNode.nodes).length > 1) ? groupNode : node;
   }
 
   toggleSelect() {
@@ -157,7 +172,7 @@ class Select extends BaseControl {
     this.toggleSelectedId = null;
   }
 
-  showSelect(selected, evt) {
+  showSelect(selected) {
     if (this.cropMode) {
       if (selected) selected.cropMode = 'frame';
       else return;

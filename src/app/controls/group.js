@@ -61,7 +61,8 @@ class NodeGroup extends Node {
   toggleNode(node) {
     if (this.groupSelect(node)) {
       Object.values(this.nodes).map(n => {
-        if (this.boxes[n.id]) return;
+        // 如果已经有了，就移出重新画，更新box状态（比如之前在编辑状态，现在退出了）
+        if (this.boxes[n.id]) this.boxes[n.id].remove();
         this.boxes[n.id] = this.createBox(n);
       });
     } else if (this.nodes[node.id]) {

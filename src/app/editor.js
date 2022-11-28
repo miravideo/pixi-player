@@ -7,7 +7,8 @@ import Crop from './controls/crop';
 import Fit from './controls/fit';
 import Constraint from './controls/constraint';
 import { color } from './utils/color';
-const { CHANGING, CHANGED, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX } = require('./utils/static');
+import md5 from "md5";
+const { HISTORY, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX } = require('./utils/static');
 
 const DEFAULT_OPTS = {
   majorColor: '#1FB0F9', selectedColor: '#1FB0F9', highlightColor: '#B2B5B6',
@@ -132,7 +133,16 @@ class Editor extends EventEmitter {
   }
 
   onKeyDown() {
-    return (evt) => this.emit(KEYDOWN, evt);
+    return (evt) => {
+      this.emit(KEYDOWN, evt);
+      if (evt.key === 'Escape') {
+        this.emit(SELECT); // unselect all
+      } else if (evt.key.toLowerCase() === 'z' && evt.mctrlKey) {
+        evt.shiftKey ? this.redo() : this.undo();
+      } else if (evt.key.toLowerCase() === 'y' && evt.mctrlKey) {
+        this.redo();
+      }
+    }
   }
 
   onKeyUp() {
@@ -148,15 +158,16 @@ class Editor extends EventEmitter {
   }
 
   // history
-  undo(n=1, hide=true) {
-    const rs = this.player.undo(n);
-    // todo: 如果不是新增和删除，可以不用清空选择
-    if (hide) this.emit(SELECT);
+  async undo(n=1) {
+    const rs = await this.player.undo(n);
+    if (rs.changed) this.emit(HISTORY, {...rs, op: 'undo'});
+    else this.emit(SELECT); // unselect
   }
 
-  redo(n=1, hide=true) {
-    const rs = this.player.redo(n);
-    if (hide) this.emit(SELECT);
+  async redo(n=1) {
+    const rs = await this.player.redo(n);
+    if (rs.changed) this.emit(HISTORY, {...rs, op: 'redo'});
+    else this.emit(SELECT); // unselect
   }
 
   get rootNode() {
@@ -209,6 +220,8 @@ class Editor extends EventEmitter {
     if (src.cachedFontFamily) node.cachedFontFamily = src.cachedFontFamily; // todo: font
     node.copySourceId = src.id;
     node.trackId = src.trackId;
+    // groupId不能跟src一样，但之前src同样的groupId的node，应该新的groupId还是一样的
+    if (src.groupId) node.conf.groupId = md5(`${src.groupId}_copy`);
     await node.preload();
     node.annotate();
     node.parent = null; // remove tmp parent..

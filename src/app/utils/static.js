@@ -6,6 +6,7 @@ module.exports = {
   SELECT: 'select',
   HOVER: 'hover',
   RESIZE: 'resize',
+  HISTORY: 'history',
   KEYDOWN: 'keydown',
   KEYUP: 'keyup',
   CROPFRAME: 'crop-frame',

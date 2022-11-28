@@ -105,7 +105,7 @@ class Text extends Display {
   }
 
   get text() {
-    return this.getConf('text', false) || this.getConf('content', false);
+    return this.getRawConf('text', false) || this.getRawConf('content', false);
   }
 
   get fontFamily() {
@@ -263,6 +263,8 @@ class Text extends Display {
   getConf(key, autounit=true) {
     if (key === 'cursorIndex') {
       return this.getView().cursor().ci;
+    } else if (key === 'text') {
+      return this.text;
     }
     return super.getConf(key, autounit);
   }
