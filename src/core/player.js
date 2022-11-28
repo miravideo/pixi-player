@@ -14,7 +14,7 @@ const FFT_SIZE = 4096;
 
 import UAParser from 'ua-parser-js';
 const BROWSER = new UAParser().getBrowser();
-const SUPPORTED = false && ['Edge', 'Chrome'].includes(BROWSER.name) && BROWSER.major >= 104 && typeof VideoEncoder !== "undefined";
+const SUPPORTED = ['Edge', 'Chrome'].includes(BROWSER.name) && BROWSER.major >= 104 && typeof VideoEncoder !== "undefined";
 
 class Player extends EventEmitter {
   constructor(opts={}) {
