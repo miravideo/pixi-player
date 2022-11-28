@@ -81,7 +81,7 @@ class Select extends BaseControl {
       const nodes = evt.records[0].nodes;
       let node = nodes.length > 1 ? new NodeGroup(this.editor, nodes) : nodes[0];
       if (node.groupId) node = this.multiSelect(node);
-      this.showSelect(node);
+      if (node.parent) this.showSelect(node);
     }
   }
 
@@ -256,7 +256,10 @@ class Select extends BaseControl {
       const node = await this.editor.cloneNode(sn);
       nodes[sn.id] = node;
 
-      const to = { zIndex: sn.zIndex, parent: sn.parent };
+      let parent = sn.parent;
+      // track内的节点复制，不要复制到track里，不然时间对不上，看上去就没效果
+      if (parent.isTrack) parent = this.editor.rootNode;
+      const to = { zIndex: sn.zIndex, parent };
 
       // 位置偏移一点
       // let [x, y] = [sn.getConf('x'), sn.getConf('y')];
@@ -319,18 +322,18 @@ class Select extends BaseControl {
     const deleteNode = (node) => {
       if (node.children.length > 0) {
         if (['scene', 'cover'].includes(node.type)) { // 移除所有各级子节点
-          const to = { removed: true, parent: null };
+          const to = { parent: null };
           node.allNodes.map(x => {
             this.editor.update([x], to, senderId);
           });
         } else if (node.type === 'text' && node.speech) { // text下面的speech要删掉
-          const to = { removed: true, parent: null };
+          const to = { parent: null };
           node.children.filter(x => x.type === 'speech').map(x => {
             this.editor.update([x], to, senderId);
           });
         } else { // 把自己的children给parent
           const isInTrack = ['spine', 'track'].includes(node.parent.type);
-          const parent = isInTrack ? node.creator() : node.parent;
+          const parent = isInTrack ? this.editor.rootNode : node.parent;
           node.children.map(x => {
             const to = { parent };
             to.start = x.startTime + node.startTime;
@@ -340,7 +343,7 @@ class Select extends BaseControl {
         }
       }
 
-      const to = { removed: true, parent: null };
+      const to = { parent: null };
       if (node.prevSibling) to.prevSibling = null;
       if (node.nextSibling) to.nextSibling = null;
 

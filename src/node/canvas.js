@@ -105,10 +105,9 @@ class Canvas extends Container {
 
     // 更新一下显示
     this.updatezIndex();
-    if (isChanged && this.canplay) {
+    if (isChanged && this.player.app) {
       // update metadata
-      this.emit({
-        type: 'loadedmetadata',
+      this.player.emit('loadedmetadata', {
         duration: this.duration,
         width: this.width,
         height: this.height,

@@ -139,6 +139,11 @@ class Store extends EventEmitter {
     }).on('loadedmetadata', meta => {
       this.focus();
       this.hideToast();
+      runInAction(() => {
+        this.loaded = true;
+        this.duration = this.player.duration;
+        this.timePercent = this.currentTime / this.duration;
+      });
     }).on('timeupdate', (e) => {
       runInAction(() => {
         this.currentTime = e.currentTime;
@@ -155,10 +160,6 @@ class Store extends EventEmitter {
     await this.player.init({...this.opt, onprogress, view: this.canvasRef.current });
     if (!this.player) return;
     this.hideLoading();
-    runInAction(() => {
-      this.loaded = true;
-      this.duration = this.player.duration;
-    });
     this.fit();
 
     // debug loading progress
