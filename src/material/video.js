@@ -20,7 +20,7 @@ class VideoMaterial extends ImageMaterial {
     let src = this.src;
     if (src.startsWith('http')) {
       // 提前下载好, 反正之后都要全部读一编
-      const res = await XhrUtil.getRemote(src, this.player.id, (p) => {
+      const res = await XhrUtil.getCachedURL(src, this.player.id, (p) => {
         const { total, loaded } = p;
         onprogress && onprogress((loaded / total) * 0.9);
       });

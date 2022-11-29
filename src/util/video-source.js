@@ -63,6 +63,7 @@ class VideoSource  {
     if (this._metacallbacks) this._metacallbacks.map(c => c.resolve());
     this._metacallbacks = null;
     this.meta = null;
+    if (this.url.startsWith('blob')) URL.revokeObjectURL(this.url)
   }
 
   static clear(cid) {
@@ -81,6 +82,20 @@ class VideoSource  {
       }
       return VPOOL[cid][key];
     });
+  }
+
+  static checkClear(player) {
+    const data = {}
+    player.rootNode.allNodes.forEach(node => {
+      if (!node.material?.videoSource) return
+      data[md5(node.material.videoSource.url)] = true;
+    })
+
+    for (const [key, videoSource] of Object.entries(VPOOL[player.id])) {
+      if (data[key]) continue
+      videoSource.destroy();
+      delete VPOOL[player.id][key]
+    }
   }
 }
 
