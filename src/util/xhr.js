@@ -33,10 +33,10 @@ async function getCache(cid, key) {
   });
 }
 
-function setCache(cid, key, res) {
+function setCache(cid, key, res, save=true) {
   if (!res || !res.data) return;
   res.updated = Date.now();
-  localforage.setItem(key, {...res, url:null});
+  if (save) localforage.setItem(key, {...res, url:null});
   res.url = URL.createObjectURL(res.data);
   if (!__cache[cid]) __cache[cid] = {};
   __cache[cid][key] = res;
@@ -59,7 +59,7 @@ const XhrUtil = {
       delete __cache[cid];
     }
   },
-  async getCachedURL(url, cid, progress=null) {
+  async getCachedURL(url, cid, progress=null, save=true) {
     const key = md5(url);
     let res = await getCache(cid, key);
     if (res && res.data) return res;
@@ -67,7 +67,7 @@ const XhrUtil = {
       const { total, loaded } = p;
       progress && progress({ key, total, loaded });
     });
-    if (res.data) setCache(cid, key, res);
+    if (res.data) setCache(cid, key, res, save);
     return res;
   },
   async getRemote(url, cid, progress=null) {
@@ -101,6 +101,19 @@ const XhrUtil = {
     });
     return __req[key];
   },
+  checkClear(player) {
+    const data = {}
+    player.rootNode.allNodes.forEach(node => {
+      if (!node.src) return
+      data[md5(node.src)] = true;
+    })
+
+    for (const [key, cache] of Object.entries(__cache[player.id])) {
+      if (data[key]) continue
+      if (!cache.url.startsWith('blob')) URL.revokeObjectURL(cache.url)
+      delete __cache[player.id][key]
+    }
+  }
 }
 
 export default XhrUtil;
