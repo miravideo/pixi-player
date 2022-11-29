@@ -135,7 +135,7 @@ class Move extends BaseControl {
   }
 
   updateShow(box) {
-    const show = Math.min(box.size.width, box.size.height) * box.scale < MIN_MOVE_SIZE;
+    const show = !this.editMode && Math.min(box.size.width, box.size.height) * box.scale < MIN_MOVE_SIZE;
     if (this._controls.moveHandle) this._controls.moveHandle.show(show);
   }
 
@@ -232,6 +232,7 @@ class Move extends BaseControl {
     this.selector.enableMulti(false); // 为了触发其他控件的show
     this.textSelect(event); // init cursor
     this._textSenderId = uuid(); // 每次新起一个senderId
+    this.updateShow(this.box);
   }
 
   textSelect(event) {

@@ -78,7 +78,7 @@ const Builder = {
     }
 
     if (this.cacheNode && typeof(this.cacheNode) === 'function') {
-      cachePromise.push(this.cacheNode(node, 'builder', progress));
+      cachePromise.push(this.cacheNode(node, 'builder', progress, true));
     }
     return node;
   },

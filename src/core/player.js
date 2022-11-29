@@ -59,7 +59,7 @@ class Player extends EventEmitter {
     if (!rootNode && value) {
       cacheRate = 0.1;
       if (mixin) Builder.regMixin(mixin);
-      if (useCache || true) Builder.cacheNode = CacheUtil.cacheNode;
+      if (useCache) Builder.cacheNode = CacheUtil.cacheNode;
       const loads = {};
       const { node, cachePromise } = Builder.from(value, {}, (p) => {
         loads[p.key] = p;
