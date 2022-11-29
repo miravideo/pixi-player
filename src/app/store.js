@@ -73,17 +73,19 @@ class Store extends EventEmitter {
 
   async export(filename) {
     if (this.loading) return;
+    this.player.emit('burning', true)
     this.cancelFunc = () => {
       this.burner.cancel();
     }
     this.showLoading(0.001);
 
-    const url = await this.burner.export(this.player, (p) => {
+    const { url, speed } = await this.burner.export(this.player, (p) => {
       runInAction(() => {
         this.loadingProgress = Math.max(p, 0.001);
       });
     });
 
+    this.player.emit('burning', false);
     if (!url) {
       // fail or cancel
       this.toast('Fail!');
@@ -94,7 +96,9 @@ class Store extends EventEmitter {
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = typeof(filename) === 'string' ? (filename.endsWith('.mp4') ? filename : `${filename}.mp4`) : 'video_export.mp4';
+    a.download = typeof(filename) === 'string' ?
+        (filename.endsWith('.mp4') ? filename : `${filename}.mp4`) :
+        `video_export_${speed.toFixed(2)}x.mp4`;
     this.containerRef.current.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -176,7 +180,7 @@ class Store extends EventEmitter {
     let top = 0, left = 0;
     if (this.opt.padding || this.opt.paddingX || this.opt.paddingY) {
       let [paddingX, paddingY] = [
-        `${this.opt.paddingX !== undefined ? this.opt.paddingX : (this.opt.padding || 0)}`, 
+        `${this.opt.paddingX !== undefined ? this.opt.paddingX : (this.opt.padding || 0)}`,
         `${this.opt.paddingY !== undefined ? this.opt.paddingY : (this.opt.padding || 0)}`
       ];
       if (paddingX.endsWith('%')) paddingX = paddingX.replace('%', '') * 0.01 * ctrWidth;
@@ -405,7 +409,7 @@ class Store extends EventEmitter {
         const res = this.player.toJson();
         this.copyToPB(JSON.stringify(res, null, 2));
       }});
-  
+
       items.push({ title: 'Source in MiraML', action: () => {
         const res = this.player.toMiraML();
         this.copyToPB(res);

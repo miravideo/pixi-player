@@ -11,7 +11,7 @@ const vdi = require.resolve('../util/video-encoder.js');
 WORKER_CODE += '(' + __webpack_modules__[vdi].toString() + ')()';
 const WORKER_URL = URL.createObjectURL(new Blob([WORKER_CODE]));
 
-const DEFAULT_OPTS = { 
+const DEFAULT_OPTS = {
   quanlity: 'default' // default | high | low
 };
 
@@ -45,8 +45,8 @@ class Burner extends EventEmitter {
     this.worker = new Worker(WORKER_URL);
     await this.workerExec({
       method: 'init', quanlity, // bitrate,
-      fps, width, height, duration, 
-      audioSampleRate, numberOfChannels, 
+      fps, width, height, duration,
+      audioSampleRate, numberOfChannels,
     });
 
     const totalFrames = Math.ceil(duration * fps);
@@ -79,7 +79,7 @@ class Burner extends EventEmitter {
       const timestamp = Math.round(1000000 * timer);
 
       vEncodePromise = this.workerExec({
-        method: 'encode', type: 'video', 
+        method: 'encode', type: 'video',
         flush, timestamp, keyFrame, buffer: imageBitmap
       }, [imageBitmap]);
 
@@ -90,7 +90,7 @@ class Burner extends EventEmitter {
         }
         const aBuffer = planarData.buffer;
         aEncodePromise = this.workerExec({
-          method: 'encode', type: 'audio', 
+          method: 'encode', type: 'audio',
           timestamp, samples: audioBuffer.length, buffer: aBuffer
         }, [aBuffer]);
         audioCursor += audioBuffer.length * 2;
@@ -121,7 +121,7 @@ class Burner extends EventEmitter {
     this.worker.terminate();
     this.worker = null;
     this.burning = false;
-    return url;
+    return { url, qt, speed: sx, size };
   }
 
   annotateKeyFrames(player) {
@@ -169,16 +169,16 @@ class Burner extends EventEmitter {
 
   async cancel() {
     if (!this.burning) return;
-    if (this.queue) this.queue.destroy();
-    this.queue = null;
-    if (this.worker) this.worker.terminate();
-    this.worker = null;
     this.cancelled = true;
     this.burning = false;
   }
 
   async destroy() {
     this.cancel();
+    if (this.queue) this.queue.destroy();
+    this.queue = null;
+    if (this.worker) this.worker.terminate();
+    this.worker = null;
     this.opts = null;
   }
 }
