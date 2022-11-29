@@ -160,7 +160,11 @@ class Store extends EventEmitter {
     await this.player.init({...this.opt, onprogress, view: this.canvasRef.current });
     if (!this.player) return;
     this.hideLoading();
-    this.fit();
+    runInAction(() => {
+      this.loaded = true;
+      this.duration = this.player.duration;
+      this.fit();
+    });
 
     // debug loading progress
     // this.loading = true;

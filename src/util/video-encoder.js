@@ -98,6 +98,8 @@ class MP4Encoder {
       samplerate: audioSampleRate,
       timescale: TIME_SCALE,
       channel_count: numberOfChannels,
+      // media_duration: TIME_SCALE * duration,
+      // duration: Math.round(MICRO_SECOUND * duration),
       hdlr: 'soun',
       type: 'mp4a',
     };

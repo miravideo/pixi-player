@@ -14,7 +14,8 @@ const FFT_SIZE = 4096;
 
 import UAParser from 'ua-parser-js';
 const BROWSER = new UAParser().getBrowser();
-const SUPPORTED = ['Edge', 'Chrome'].includes(BROWSER.name) && BROWSER.major >= 104 && typeof VideoEncoder !== "undefined";
+const IS_HTTPS = ('https:' == document.location.protocol || 'localhost' == document.location.hostname) ? true : false;
+const SUPPORTED = ['Edge', 'Chrome'].includes(BROWSER.name) && BROWSER.major >= 104 && IS_HTTPS && typeof VideoEncoder !== "undefined";
 
 class Player extends EventEmitter {
   constructor(opts={}) {
@@ -43,6 +44,8 @@ class Player extends EventEmitter {
         msg = `Please open in Edge/Chrome with version 104+`;
       } else if (BROWSER.major < 104) {
         msg = `Browser version(${BROWSER.major}) too old, should 104+`;
+      } else if (!IS_HTTPS) {
+        msg = `Only work in HTTPS, please change the url.`;
       }
       // for resolution x2
       view.width = view.width * 2;
