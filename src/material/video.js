@@ -23,8 +23,8 @@ class VideoMaterial extends ImageMaterial {
       const res = await XhrUtil.getCachedURL(src, this.player.id, (p) => {
         const { total, loaded } = p;
         onprogress && onprogress((loaded / total) * 0.9);
-      });
-      src = URL.createObjectURL(res.data);
+      }, false);
+      src = res.url;
       this.cachedURL = src;
     }
 
