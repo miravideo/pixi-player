@@ -22,16 +22,29 @@ class Display extends Clip {
   }
 
   applyCornerRadius(view, radius) {
-    // todo: move to DisplayObject
-    if (view.mask || !isFinite(radius) || radius <= 0) return;
-    const mask = new Graphics();
     const { width, height } = view;
+    const r = Math.max(width, height) / Math.min(width, height);
+    const circle = r < 1.01 && radius >= width * 0.5;
+    const metrics = `${width}_${height}_${radius}_${circle}`;
+    if ((view.mask && view.mask._cr_metrics === metrics) || !isFinite(radius) || radius <= 0) return;
+    let mask;
+    if (view.mask && view.mask instanceof Graphics) {
+      mask = view.mask;
+      mask.clear();
+    } else {
+      mask = new Graphics();
+    }
+    mask._cr_metrics = metrics;
     mask.scale.x = 1 / view.scale.x;
     mask.scale.y = 1 / view.scale.y;
     const x = - width * view.anchor.x;
     const y = - height * view.anchor.y;
     mask.beginFill(0xFFFFFF);
-    mask.drawRoundedRect(x, y, width, height, radius);
+    if (circle) {
+      mask.drawCircle(x + width * 0.5, y + height * 0.5, radius);
+    } else {
+      mask.drawRoundedRect(x, y, width, height, radius);
+    }
     mask.endFill();
     view.mask = mask;
     view.addChild(mask);

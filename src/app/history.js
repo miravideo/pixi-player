@@ -65,10 +65,12 @@ export class Record extends EventEmitter {
         changed = nodeChanged = true;
       }
 
-      if (nodeChanged && !node.isVirtual) { // 虚拟node，不保存
+      if (nodeChanged) { // 虚拟node，不保存
         // 保存记录
-        if (save) this.updateAttr(node.id, changeAttr);
-        this._nodes[node.id] = node;
+        if (save && !node.isVirtual) {
+          this.updateAttr(node.id, changeAttr);
+          this._nodes[node.id] = node;
+        }
         changedNodes.push(node);
         changedAttrs[node.id] = changeAttr;
       }

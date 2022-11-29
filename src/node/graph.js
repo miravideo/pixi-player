@@ -3,15 +3,17 @@ import ViewNode from "../mixin/view";
 import { Graphics, utils, settings, Texture, Sprite, BaseTexture, Rectangle } from 'pixi.js'
 
 const DEFAULT_CONF = {
-  'x': 0, 'y': 0, 
+  'x': 0, 'y': 0, anchor: [0, 0],
 };
+
+// todo: graph的问题很大，渲染效率也很低
 
 class Graph extends Clip {
   constructor(conf) {
     super({type: 'graph', ...conf});
   }
 
-  get viewAttrKeys() { // for sprite mixin
+  get viewAttrKeys() { // for view mixin
     return ['x', 'y', 'anchor', 'rotation'];
   }
 
@@ -29,7 +31,7 @@ class Graph extends Clip {
   }
 
   render(view, absTime) {
-    // view.clear();
+    view.clear();
     const shape = this.getConf('shape');
     if (typeof shape === 'string') {
       this.drawShape(view, shape, this);
@@ -62,13 +64,6 @@ class Graph extends Clip {
       view.source = canvas;
       view.rendered = true;
     }
-
-    // view.lineStyle(0);
-    // const count = absTime;
-    // view.beginFill(0x8bc5ff, 0.9);
-    // view.moveTo(-120 + Math.sin(count) * 20, -100 + Math.cos(count)* 20);
-    // view.lineTo(-320 + Math.cos(count)* 20, 100 + Math.sin(count)* 20);
-    // view.lineTo(120 + Math.sin(count) * 20, 100 + Math.cos(count)* 20);
 
     return view;
   }

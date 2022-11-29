@@ -92,7 +92,6 @@ class Select extends BaseControl {
 
   onHover() {
     return (evt) => {
-      if (this.changing) return;
       (evt.type === 'mouseout') ? this.hideHover() : this.showHover(evt.target, evt);
     }
   }
