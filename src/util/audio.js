@@ -15,7 +15,7 @@ class Analyser {
 
   constructor(fftSize) {
     this.properties = Analyser.defaultProperties;
-    this._time = 0;
+    this._time = -1;
     if (fftSize) this.properties.fftSize = fftSize;
     this.init();
   }
