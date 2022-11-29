@@ -36,7 +36,7 @@ class VideoMaterial extends ImageMaterial {
     this.videoSource = await VideoSource.get(src, this.player);
     this.info = await this.videoSource.loadmeta();
     this.ticker = 1 / this.info.fps;
-    console.log('meta', this.node.id, this.src, this.info);
+    // console.log('meta', this.node.id, this.src, this.info);
 
     this.canvas = this.createCanvas();
     onprogress && onprogress(1.0);

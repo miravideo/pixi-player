@@ -330,11 +330,9 @@ class Clip extends EventEmitter {
         // remove parent
         const parent = this.parent;
         parent.removeChild(this);
-        parent.refreshSibling && parent.refreshSibling();
       }
       if (value && value.type) {
         value.addChild(this, this.nextSibling);
-        this.parent.refreshSibling && this.parent.refreshSibling();
       }
       return;
     } else if (this.keyframe?.keyFrames[key]) {
@@ -781,6 +779,7 @@ class Clip extends EventEmitter {
         try {
           v.interactive = false;
           // todo: clear events
+          if (v.parent) v.parent.removeChild(v);
           v.destroy(true);
         } catch (e) {}
       });

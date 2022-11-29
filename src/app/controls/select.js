@@ -265,8 +265,8 @@ class Select extends BaseControl {
       // let [x, y] = [sn.getConf('x'), sn.getConf('y')];
       // to.x = x + 30, to.y = y + 30;
 
+      // if (sn.nextSibling) to.nextSibling = sn.nextSibling;
       // 若parent也在本次复制之列，保持复制后的关系
-      if (sn.nextSibling) to.nextSibling = sn.nextSibling;
       if (nodes[sn.parent.id]) to.parent = nodes[sn.parent.id];
       if (offset !== 0 && !nodes[sn.parent.id] && sn.parent.type !== 'spine') {
         to.start = Math.max(0, sn.startTime + offset);
@@ -319,17 +319,22 @@ class Select extends BaseControl {
   delete(node, deselect=true) {
     if (!node) return;
     const senderId = uuid();
+    const nodes = [], changes = {};
     const deleteNode = (node) => {
       if (node.children.length > 0) {
         if (['scene', 'cover'].includes(node.type)) { // 移除所有各级子节点
           const to = { parent: null };
           node.allNodes.map(x => {
-            this.editor.update([x], to, senderId);
+            nodes[x.id] = x;
+            changes[x.id] = to;
+            // this.editor.update([x], to, senderId);
           });
         } else if (node.type === 'text' && node.speech) { // text下面的speech要删掉
           const to = { parent: null };
           node.children.filter(x => x.type === 'speech').map(x => {
-            this.editor.update([x], to, senderId);
+            nodes[x.id] = x;
+            changes[x.id] = to;
+            // this.editor.update([x], to, senderId);
           });
         } else { // 把自己的children给parent
           const isInTrack = ['spine', 'track'].includes(node.parent.type);
@@ -338,22 +343,22 @@ class Select extends BaseControl {
             const to = { parent };
             to.start = x.startTime + node.startTime;
             if (x.conf.end) to.end = x.endTime + node.startTime;
-            this.editor.update([x], to, senderId);
+            nodes[x.id] = x;
+            changes[x.id] = to;
+            // this.editor.update([x], to, senderId);
           });
         }
       }
 
-      const to = { parent: null };
-      if (node.prevSibling) to.prevSibling = null;
-      if (node.nextSibling) to.nextSibling = null;
-
+      const to = { prevSibling: null, nextSibling: null, parent: null };
       // remove next trans
       if (node.type !== 'trans') {
         if (!node.nextSibling && node.prevSibling?.type === 'trans') deleteNode(node.prevSibling);
         if (node.nextSibling?.type === 'trans') deleteNode(node.nextSibling);
       }
 
-      this.editor.update([node], to, senderId);
+      nodes[node.id] = node;
+      changes[node.id] = to;
     }
 
     if (node.nodes) {
@@ -364,6 +369,9 @@ class Select extends BaseControl {
     } else {
       deleteNode(node);
     }
+
+    // update
+    this.editor.update(Object.values(nodes), changes, senderId);
 
     if (deselect) {
       this.hideSelect(); // 必须先删再hide, 不然group可能已经destroy了

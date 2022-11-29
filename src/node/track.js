@@ -11,33 +11,33 @@ class Track extends Clip {
 
   addChild(child, insertBefore=null) {
     super.addChild(child, insertBefore);
-    this.refreshSibling();
+    if (!insertBefore) {
+      child.prevSibling = this.lastChild;
+      if (this.lastChild) this.lastChild.nextSibling = child;
+      this.lastChild = child;
+    } else {
+      // prev relation of child
+      if (insertBefore.prevSibling) insertBefore.prevSibling.nextSibling = child;
+      child.prevSibling = insertBefore.prevSibling;
+      // next relation of child
+      insertBefore.prevSibling = child;
+      child.nextSibling = insertBefore;
+    }
   }
 
   removeChild(child) {
     super.removeChild(child);
-    this.refreshSibling();
-  }
-
-  refreshSibling() {
-    // set prev/next sibling.
-    for (let i = 0; i < this.children.length; i++) {
-      if (i == 0) {
-        this.children[i].prevSibling = null; // clear
-        continue;
-      }
-      const prevSibling = this.children[i - 1];
-      this.children[i].prevSibling = prevSibling;
-      prevSibling.nextSibling = this.children[i];
-      this.children[i].nextSibling = null; // clear
-    }
+    if (this.lastChild === child) this.lastChild = child.prevSibling;
+    if (child.prevSibling) child.prevSibling.nextSibling = child.nextSibling;
+    if (child.nextSibling) child.nextSibling.prevSibling = child.prevSibling;
+    child.prevSibling = null;
+    child.nextSibling = null;
   }
 
   createDisplay() { }
 
   annotate() {
-    const lastChild = this.children[this.children.length - 1];
-    this.lastChildEndTime = lastChild ? lastChild.endTime : 0;
+    this.lastChildEndTime = this.lastChild ? this.lastChild.endTime : 0;
   }
 
   get absStartTime() {

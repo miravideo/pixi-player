@@ -221,7 +221,6 @@ class Editor extends EventEmitter {
       await this.player.core.initMixin(src.mixinType, node);
     }
     node.parent = src.parent; // tmp parent, just set for annotate
-    if (src.cachedFontFamily) node.cachedFontFamily = src.cachedFontFamily; // todo: font
     node.copySourceId = src.id;
     node.trackId = src.trackId;
     // groupId不能跟src一样，但之前src同样的groupId的node，应该新的groupId还是一样的

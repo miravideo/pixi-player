@@ -51,7 +51,8 @@ export class Record extends EventEmitter {
     // todo: get from player
     let rootNode = nodes[0].root();
     let changed = false;
-    const updates = nodes.map(async (node) => {
+    const changedNodes = [], changedAttrs = {};
+    nodes.map((node) => {
       const _attrs = attrs[node.id] || attrs;
       let changeAttr = {}, nodeChanged = false;
       for (const [k, to] of Object.entries(_attrs)) {
@@ -59,39 +60,64 @@ export class Record extends EventEmitter {
         // console.log('setConf', node.id, {k, from, to, save});
         if (from === to) continue; // not change
         changeAttr[k] = { from, to };
-        node.setConf(k, to); // autounit = true
+        // 先不应用，避免一些属性之间更改的依赖
+        // node.setConf(k, to); // autounit = true
         changed = nodeChanged = true;
       }
-      if (nodeChanged) {
-        if (changeAttr['src'] && ['video', 'image', 'audio'].includes(node.type)) {
-          node.clearViewCache();
-          node.conf.cachedSrc = undefined;
-          // todo: loading progress
-          await node.preload();
-        }
 
-        // todo: change font reload
-
-        // todo: 不能随便清view缓存，否则会不断的新建view，绑定事件
-        // node.clearViewCache();
-        await node.updateView(this.senderId);
-
-        // 虚拟node，不保存
-        if (node.isVirtual) return;
+      if (nodeChanged && !node.isVirtual) { // 虚拟node，不保存
         // 保存记录
         if (save) this.updateAttr(node.id, changeAttr);
         this._nodes[node.id] = node;
+        changedNodes.push(node);
+        changedAttrs[node.id] = changeAttr;
       }
+    });
+
+    if (!changed) return false;
+
+    let updates = changedNodes.map(async (node) => {
+      const changeAttr = changedAttrs[node.id];
+
+      let entries = Object.entries(changeAttr);
+      // enforce key "parent" be the last change between attrs
+      if (changeAttr['parent']) {
+        entries = [...entries.filter(x => x[0] !== 'parent'), ['parent', changeAttr['parent']]];
+      }
+
+      // set conf
+      for (const [k, val] of entries) {
+        node.setConf(k, val.to); // autounit = true
+      }
+
+      // change resource - reload
+      if ((changeAttr['src'] && ['video', 'image', 'audio'].includes(node.type)) || 
+          (changeAttr['font'] && node.type === 'text')) {
+        node.clearViewCache();
+        for (const key of Object.keys(node.conf)) {
+          // clear cached key
+          if (key.startsWith('cached')) delete node.conf[key];
+        }
+        // todo: loading progress
+        await node.preload();
+      }
+
+      // change parent
+      if (changeAttr['parent']) node.clearViewCache();
     });
     await Promise.all(updates);
 
-    if (changed) {
-      // todo: 某些时候（新增/删除/时间改动/zIndex改动），需要重新annotate
-      if (!rootNode) rootNode = nodes[0].root();
-      rootNode.annotate();
-    }
+    // 新增/删除/时间改动/zIndex改动，需要重新annotate
+    if (!rootNode) rootNode = nodes[0].root();
+    rootNode.annotate();
 
-    return changed;
+    // update view after all changes done
+    updates = changedNodes.map(async (node) => {
+      await node.updateView(this.senderId);
+    });
+    await Promise.all(updates);
+
+    return true;
   }
 
   merge(record) {
@@ -161,6 +187,7 @@ export class History extends EventEmitter {
   }
 
   async undo(n=1) {
+    // todo: 只需要apply最后一个就行了？
     const record = this._records[this._index-1];
     if (n <= 0 || !record) return [];
     this._index--;

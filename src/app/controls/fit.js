@@ -23,15 +23,14 @@ class Fit extends Move {
     if (this.node.cropMode) return {};
     if (!['video', 'image'].includes(this.node.type) || this.node.asMask) {
       return {
-        flipX: { box: box.handleBox, styleClass: 'flipX' },
-        flipY: { box: box.handleBox, styleClass: 'flipY' }
+        // flipX: { box: box.handleBox, styleClass: 'flipX' },
+        // flipY: { box: box.handleBox, styleClass: 'flipY' }
       };
     }
     return { 
       fit: { box: box.handleBox, styleClass: 'fit' },
       crop: { box: box.handleBox, styleClass: 'crop' },
-      flipX: { box: box.handleBox, styleClass: 'flipX' },
-      // flipY: { box: box.handleBox, styleClass: 'flipY' },
+      // flipX: { box: box.handleBox, styleClass: 'flipX' },
     };
   }
 
