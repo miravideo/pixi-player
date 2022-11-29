@@ -79,11 +79,17 @@ class Store extends EventEmitter {
     }
     this.showLoading(0.001);
 
-    const { url, speed } = await this.burner.export(this.player, (p) => {
+    let url, speed;
+    const res = await this.burner.export(this.player, (p) => {
       runInAction(() => {
         this.loadingProgress = Math.max(p, 0.001);
       });
     });
+
+    if (res) {
+      url = res.url;
+      speed = res.speed;
+    }
 
     this.player.emit('burning', false);
     if (!url) {
