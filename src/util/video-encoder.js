@@ -85,7 +85,7 @@ class MP4Encoder {
 
     const encorderOptions = {
       // https://www.w3.org/TR/webcodecs-aac-codec-registration/
-      codec: "mp4a.40.2", // mp4a.40.2 — MPEG-4 AAC LC 
+      codec: "mp4a.40.02", // mp4a.40.02 — MPEG-4 AAC LC, leading 0 for Aud-OTI compatibility
       sampleRate: audioSampleRate,
       numberOfChannels: numberOfChannels,
       bitrate: br.a,
