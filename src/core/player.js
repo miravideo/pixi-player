@@ -227,7 +227,7 @@ class Player extends EventEmitter {
   }
 
   async play() {
-    if (this.playing || this.locked) return;
+    if (!this.app || this.playing || this.locked) return;
     this._renderTime = { video: 0, audio: 0 };
     this.lastTime = this.audioContext.currentTime;
     if (this.currentTime > this.duration) {
@@ -255,7 +255,7 @@ class Player extends EventEmitter {
   }
 
   pause() {
-    if (this.locked) return;
+    if (this.locked || !this.app) return;
     this.app.stop();
     this.stopAudio();
 
@@ -501,10 +501,12 @@ class Player extends EventEmitter {
   }
 
   toMiraML(asTemplate=true, indent=2) {
+    if (!this.rootNode) return;
     return this.rootNode.toMiraML(asTemplate, indent);
   }
 
   toJson(asTemplate=false) {
+    if (!this.rootNode) return;
     return this.rootNode.toJson(asTemplate);
   }
 
