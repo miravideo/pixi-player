@@ -188,7 +188,9 @@ class Clip extends EventEmitter {
     const cacheType = this.cacheType(type);
     if (!this._views[cacheType]) {
       this._views[cacheType] = this.createView();
-      if (cacheType === VIEW_TYPES.play) this.addViewEvent(this._views[cacheType]);
+      if (cacheType === VIEW_TYPES.play && this.conf.editable !== false) {
+        this.addViewEvent(this._views[cacheType]);
+      }
     }
     if (this._views[cacheType]) {
       this._views[cacheType].refId = `${this.id}@${cacheType}`;
