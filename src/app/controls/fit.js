@@ -12,6 +12,7 @@ class Fit extends Move {
 
   show(show) {
     if (show === undefined) show = !this.selector.withMulti;
+    if (this.editor.controls.move?.editMode) show = false;
     if (this._controls.fit) this._controls.fit.show(show && this.node.getConf('rotation', false) === 0);
     if (this._controls.crop) this._controls.crop.show(show && this.editor.canCropFrame(this.node));
     if (this._controls.flipX) this._controls.flipX.show(show);

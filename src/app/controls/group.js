@@ -141,7 +141,7 @@ class NodeGroup extends Node {
     Object.values(this.nodes).map((node) => {
       const box = this.boxes[node.id];
       if (!box) return;
-      const delta = {};
+      const delta = {}, attr = {};
       if (rotationDelta) {
         const bp = box.position.rebase(anchor);
         const { x, y } = bp.rotate(rotationDelta).rebase(bp);
@@ -153,9 +153,18 @@ class NodeGroup extends Node {
         delta.x = (delta.x || 0) + _positionDelta.x;
         delta.y = (delta.y || 0) + _positionDelta.y;
         // 统一只改scale
-        delta.scale = Math.max(scaleDelta.x, scaleDelta.y);
-        // delta.width = box.size.width * scaleDelta.x;
-        // delta.height = box.size.height * scaleDelta.y;
+
+        if (node.type === 'text') {
+          delta.width = box.size.width * scaleDelta.x;
+          delta.height = box.size.height * scaleDelta.y;
+          // text高度变了，就把font-size也一起变了(等比例)
+          attr.fontSize = node.fontSize * (1 + scaleDelta.y);
+          // 如果原先没有height，也不要设置
+          if (!node.conf.height) delete delta.height;
+        } else {
+          delta.scale = Math.max(scaleDelta.x, scaleDelta.y);
+        }
+
         // todo: _positionDelta需要矫正，否则不断拉伸会一直漂移。。。
       }
 
@@ -167,6 +176,7 @@ class NodeGroup extends Node {
       if (Object.values(delta).filter(v => v !== 0).length > 0) {
         nodes.push(node);
         attrs[node.id] = this.editor.getViewAttr(node, delta);
+        Object.assign(attrs[node.id], attr);
       }
     });
 

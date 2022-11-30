@@ -58,9 +58,7 @@ class Move extends BaseControl {
 
   onKeyDown() {
     return (evt) => {
-      if (this.constructor.type !== 'move' || !this.box
-       // 只在鼠标hover在上面的时候才能键盘移动
-       || (!this.view?.hasClass('hover') && !this.editMode)) return;
+      if (this.constructor.type !== 'move' || !this.box) return;
       if (this.editMode) {
         if (evt.key === 'Backspace') {
           return this.updateText(this.node.delete());
@@ -75,13 +73,25 @@ class Move extends BaseControl {
           // cut = copy + delete
           this.copyText();
           return this.updateText(this.node.delete());
+        } else if (this.constructor.KEY_MAP[evt.key]) {
+          evt.preventDefault();
+          const [x, y] = this.constructor.KEY_MAP[evt.key];
+          this.node.selectMove({x, y}, evt.shiftKey, evt.mctrlKey);
+          this.updateCursor();
         }
+
+      } else if (this.node.type === 'text' && evt.key === 'Enter') {
+        evt.preventDefault();
+        this.textEditStart({x: 0, y: 0});
+
+      } else if (this.constructor.KEY_MAP[evt.key]) {
+        // this.view?.hasClass('hover') && 
+        // 只在鼠标hover在上面的时候才能键盘移动
+        evt.preventDefault();
+        const move = this.constructor.KEY_MAP[evt.key];
+        const [ x, y ] = arrMulti(move, evt.shiftKey ? 10 : 1);
+        this.moveDelta({ x, y });
       }
-      const move = this.constructor.KEY_MAP[evt.key];
-      if (!move) return;
-      evt.preventDefault();
-      const [ x, y ] = arrMulti(move, evt.shiftKey ? 10*this.box.scale : this.box.scale);
-      this.onMove({ delta: { x, y }, type: 'keyboard', event: evt });
     }
   }
 
@@ -163,18 +173,15 @@ class Move extends BaseControl {
 
   async onMove(event) {
     if (!this.canMove) return;
-    if (this.editMode) {
-      if (event.type === 'keyboard') {
-        this.node.selectMove(event.delta, event.event.shiftKey, event.event.mctrlKey);
-        this.updateCursor();
-      } else {
-        this.textSelect(event);
-      }
-      return;
-    }
+    if (this.editMode) return this.textSelect(event);
+    await this.moveDelta(this.getDelta(event));
+  }
+
+  async moveDelta(delta) {
+    if (!this.canMove) return;
     // 只要开始移动了，就退出multi模式，不然可能会hover自己
     if (event.moved) this.selector.enableMulti(false);
-    await this.update(this.getDelta(event));
+    await this.update(delta);
     this.box.move();
     const { x: pX, y: pY } = round(this.box.position, 0);
     this.toast(`X:${pX} Y:${pY}`, 1000);
