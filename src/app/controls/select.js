@@ -110,12 +110,18 @@ class Select extends BaseControl {
       let selected;
       if (this.withMulti || evt.action === 'multi') {
         selected = this.selected; // 用已经选中的作为初始
-        if (Array.isArray(evt.nodes) && evt.nodes.length > 0) {
-          for (const n of evt.nodes) {
-            selected = this.multiSelect(n, selected);
-          }
+        if (node && node.groupId && selected.type === 'group' 
+          && selected.groupLocked && selected.nodes[node.id]) {
+          // 如果按住ctrl，可以单独选择一个已经锁定的组内元素
+          selected = node;
         } else {
-          selected = this.multiSelect(node, selected);
+          if (Array.isArray(evt.nodes) && evt.nodes.length > 0) {
+            for (const n of evt.nodes) {
+              selected = this.multiSelect(n, selected);
+            }
+          } else {
+            selected = this.multiSelect(node, selected);
+          }
         }
       } else if (node && node.groupId) {
         selected = this.multiSelect(node);

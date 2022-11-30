@@ -22,7 +22,14 @@ class MiraEditorBox extends MiraEditorBase {
 
   bind(node) {
     this.node = node;
-    if (node.cropMode) this.addClass("mirae-box-none");
+    return this.refresh();
+  }
+
+  refresh() {
+    this.toggleClass("mirae-box-none", !!this.node.cropMode);
+    if (this.node.type === 'group') {
+      this.toggleClass("group-locked", !!this.node.groupLocked);
+    }
     return this;
   }
 

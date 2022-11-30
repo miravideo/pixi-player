@@ -3,7 +3,7 @@
 const MiraEditorFit = require('../views/fit-view');
 const Move = require('./move');
 const { round } = require('../utils/math');
-const { OP_END, CHANGING, CROPFRAME } = require('../utils/static');
+const { OP_END, CHANGING, CROPFRAME, SELECT } = require('../utils/static');
 
 class Fit extends Move {
   static type = "fit";
@@ -17,8 +17,7 @@ class Fit extends Move {
     if (this._controls.flipX) this._controls.flipX.show(show);
     if (this._controls.flipY) this._controls.flipY.show(show);
     if (this._controls.group) {
-      const styleClass = this.node.groupLocked ? 'lock' : 'unlock';
-      this._controls.group.show(show).removeClass(['lock', 'unlock']).addClass(styleClass);
+      this._controls.group.show(show).toggleClass('locked', !!this.node.groupLocked);
     }
     return this;
   }
@@ -82,6 +81,7 @@ class Fit extends Move {
     } else if (event.target.hasClass('group')) {
       await this.node.lock(!this.node.groupLocked);
       this.show(true);
+      this.box.refresh();
     }
   }
 }
