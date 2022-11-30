@@ -2,10 +2,15 @@ import EventEmitter from "eventemitter3";
 import Utils from '../util/utils';
 
 export class Record extends EventEmitter {
-  constructor(senderId) {
+  constructor(player, senderId) {
     super();
     this.id = Utils.genUuid();
-    this.senderId = senderId;
+    this.player = player;
+    this.time = player.currentTime;
+    this.createdTime = Date.now();
+    this.updatedTime = this.createdTime;
+    // 把时间轴作为senderID，不同时间轴上的修改，不合并
+    this.senderId = `${senderId}@${this.time}`;
     this._nodes = {};
     this._attrs = {};
   }
@@ -48,8 +53,11 @@ export class Record extends EventEmitter {
       else throw new Error('invalid node');
     }
 
-    // todo: get from player
-    let rootNode = nodes[0].root();
+    if (this.player.currentTime != this.time) {
+      // 先seek回记录的时间
+      await this.player.seekTo(this.time);
+    }
+
     let changed = false;
     const changedNodes = [], changedAttrs = {};
     nodes.map((node) => {
@@ -110,8 +118,7 @@ export class Record extends EventEmitter {
     await Promise.all(updates);
 
     // 新增/删除/时间改动/zIndex改动，需要重新annotate
-    if (!rootNode) rootNode = nodes[0].root();
-    rootNode.annotate();
+    this.player.rootNode.annotate();
 
     // update view after all changes done
     updates = changedNodes.map(async (node) => {
@@ -127,6 +134,7 @@ export class Record extends EventEmitter {
       this._nodes[node.id] = node;
       this.updateAttr(node.id, record._attrs[node.id]);
     });
+    this.updatedTime = Date.now();
   }
 
   updateAttr(nodeId, attrs) {
@@ -145,6 +153,7 @@ export class Record extends EventEmitter {
   }
 
   destroy() {
+    this.player = null;
     this._nodes = null;
     this._attrs = null;
   }
@@ -165,7 +174,6 @@ export class History extends EventEmitter {
       this._records.splice(this._index).map(r => r.destroy());
     }
 
-    record.time = Date.now();
     const last = this._records[this._index-1];
     if (last && last.senderId === record.senderId) {
       last.merge(record);

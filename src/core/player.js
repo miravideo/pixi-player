@@ -203,6 +203,10 @@ class Player extends EventEmitter {
   }
 
   set currentTime(time) {
+    this.seekTo(time);
+  }
+
+  async seekTo(time) {
     const { playing } = this;
     if (playing) {
       this.app.stop(); // stop
@@ -210,12 +214,11 @@ class Player extends EventEmitter {
     }
     this._timer = time;
     this.emit('seeking');
-    (async () => {
-      await this.render();
-      this.emit('seeked');
-      this.emit('timeupdate', {currentTime: this._timer, duration: this.duration});
-      if (playing) this.app.start(); // go
-    })();
+    await this.render();
+    this.emit('seeked');
+    this.emit('timeupdate', {currentTime: this._timer, duration: this.duration});
+    if (playing) this.app.start(); // go
+    console.log('seekTo', time);
   }
 
   get playing() {

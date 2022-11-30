@@ -121,7 +121,7 @@ class PlayerUI {
   async update(nodes, attrs, senderId, sync) {
     return this._queuedUpdate(async () => {
       senderId = senderId || uuid();
-      let record = new Record(senderId);
+      let record = new Record(this.core, senderId);
       const changed = await record.update(nodes, attrs);
       // return the last record merged this one
       record = this.history.append(record);

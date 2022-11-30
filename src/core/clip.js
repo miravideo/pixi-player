@@ -10,7 +10,7 @@ import AnimationNode from '../mixin/animation';
 
 import { Rectangle, SCALE_MODES } from 'pixi.js'
 
-const DEFAULT_CONF = {
+const DEFAULT_CONF = { active: true,
   x: '50vw', y: '50vh', anchor: [0.5, 0.5],
   scale: 1, rotation: 0, alpha: 1, speed: 1, volume: 1,
   enableAudioAnalyser: false, 'object-fit': 'cover',
@@ -133,12 +133,15 @@ class Clip extends EventEmitter {
     super();
     this.conf = { type: 'clip', ...conf };
     this.type = this.conf.type;
-    this.active = true;
     this.parent = null;
     this.children = [];
     this._drawing = {};
     this._events = {};
     this.init();
+  }
+
+  get active() {
+    return !!this.getConf('active', false);
   }
 
   get player() {
