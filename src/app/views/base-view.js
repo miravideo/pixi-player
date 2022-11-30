@@ -99,6 +99,11 @@ class MiraEditorBase extends HTMLElement {
     return klass.filter(x => this.classList.contains(x)).length > 0;
   }
 
+  styleNumber(key, $el=null) {
+    $el = $el || this;
+    return Number($el.style[key].replace('px', ''));
+  }
+
   appendTo(container) {
     if (container) container.append(this);
     return this;

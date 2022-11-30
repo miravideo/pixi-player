@@ -109,29 +109,35 @@ class MiraEditorBox extends MiraEditorBase {
   refreshHandle() {
     const ctr = this.parentNode;
     if (!this.handleBox || !ctr) return this;
-    const { width, height } = this.node.player;
-    const center = { x: width / 2, y: height / 2 };
-    // 计算4条边的中心点，哪个距离root中心最近
+    const { width, height, canvas } = this.node.player;
+
+    // calc editor container bounds (includes margin)
+    const mTop = this.styleNumber('marginTop', canvas) / this.scale;
+    const mLeft = this.styleNumber('marginLeft', canvas) / this.scale;
+    const bounds = [['x', -mLeft, 1], ['x', width+mLeft, -1], ['y', -mTop, 1], ['y', height+mTop, -1]];
+
+    // get the max distance to nearest bounds.
     const { width: w, height: h } = this.size;
     const left = - w * this.anchor.x;
     const top = - h * this.anchor.y;
     const points = [ [ left, 0 ], [ 0, top ], [ 0, top + h ], [ left + w, 0 ] ];
     const dists = points.map(pt => {
       const p = (new Point(pt)).rotate(this.rotation).offset(this.position);
-      return norm2d([p.x - center.x, p.y - center.y]);
+      // return nearest distance to bounds, may < 0 for out of bounds
+      return Math.min(...bounds.map(([k, v, a]) => (p[k] - v) * a));
     });
 
-    dists[2] -= 10; // 相比top, 优先bottom, 因下方控件空间更多 (没有考虑转了超过90度的情况)
-    const minDist = Math.min(...dists);
-    const minIdx = dists.indexOf(minDist);
+    dists[2] += 10; // 相比top, 优先bottom, 因下方控件空间更多 (没有考虑转了超过90度的情况)
+    const maxDist = Math.max(...dists); // get the max off bounds (may near to the center)
+    const maxIdx = dists.indexOf(maxDist);
 
     const classList = this.handleBox.classList;
     const positions = [ 'left', 'top', 'bottom', 'right' ];
     const idx = positions.map(p => classList.contains(p)).findIndex(x => x);
     // 如果当前控件点距离跟最小距离的差，小于10，就暂时不改，避免跳动
-    if (idx === minIdx || (dists[idx] - minDist) < 10) return this;
+    if (idx === maxIdx || (maxDist - dists[idx]) < 10) return this;
     classList.remove(...positions);
-    classList.add(positions[minIdx]);
+    classList.add(positions[maxIdx]);
     this.setRotate(); // update rotate cursor
     return this;
   }

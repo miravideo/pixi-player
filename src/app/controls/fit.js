@@ -16,11 +16,20 @@ class Fit extends Move {
     if (this._controls.crop) this._controls.crop.show(show && this.editor.canCropFrame(this.node));
     if (this._controls.flipX) this._controls.flipX.show(show);
     if (this._controls.flipY) this._controls.flipY.show(show);
+    if (this._controls.group) {
+      const styleClass = this.node.groupLocked ? 'lock' : 'unlock';
+      this._controls.group.show(show).removeClass(['lock', 'unlock']).addClass(styleClass);
+    }
     return this;
   }
 
   controls(box) {
     if (this.node.cropMode) return {};
+    if (this.node.type === 'group') {
+      return {
+        group: { box: box.handleBox, styleClass: 'group' },
+      };
+    }
     if (!['video', 'image'].includes(this.node.type) || this.node.asMask) {
       return {
         // flipX: { box: box.handleBox, styleClass: 'flipX' },
@@ -70,6 +79,9 @@ class Fit extends Move {
     } else if (event.target.hasClass('flipY')) {
       Fit.apply(this.node, { to: { flipY: !this.node.conf.flipY } }, 'resize');
       this.node.emit(CHANGING, {action: OP_END});
+    } else if (event.target.hasClass('group')) {
+      await this.node.lock(!this.node.groupLocked);
+      this.show(true);
     }
   }
 }

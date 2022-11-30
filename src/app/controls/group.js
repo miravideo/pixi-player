@@ -25,6 +25,19 @@ class NodeGroup extends Node {
     return this.editor.player.core;
   }
 
+  get groupLocked() {
+    const nodes = Object.values(this.nodes);
+    const groupId = nodes[0]?.groupId;
+    return nodes.length > 1 && groupId && nodes.every(n => n.groupId === groupId);
+  }
+
+  async lock(lock=true) {
+    if (!this.lockId) this.lockId = uuid();
+    const groupId = lock ? this.lockId : undefined;
+    const nodes = Object.values(this.nodes);
+    await this.editor.update(nodes, { groupId }, this.lockId);
+  }
+
   root() {
     return this.editor.rootNode;
   }

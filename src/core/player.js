@@ -218,7 +218,6 @@ class Player extends EventEmitter {
     this.emit('seeked');
     this.emit('timeupdate', {currentTime: this._timer, duration: this.duration});
     if (playing) this.app.start(); // go
-    console.log('seekTo', time);
   }
 
   get playing() {
@@ -284,6 +283,10 @@ class Player extends EventEmitter {
   get queue() {
     if (!this._queue) this._queue = new Queue();
     return this._queue;
+  }
+
+  get canvas() {
+    return this.app?.view;
   }
 
   getRenderer(type) {
