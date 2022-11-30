@@ -29,10 +29,7 @@ class Mixin extends Display {
   }
 
   defaultVal(key) {
-    let value;
-    if (this.defaultConf) {
-      value = this.defaultConf(key)
-    }
+    const value = this.defaultConf ? this.defaultConf(key) : undefined;
     return (value === undefined) ? super.defaultVal(key) : value;
   }
 

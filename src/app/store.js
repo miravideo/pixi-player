@@ -282,7 +282,7 @@ class Store extends EventEmitter {
   }
 
   focus() {
-    if (this.opt.keyboardPlay && this.containerRef.current) {
+    if (this.containerRef.current) {
       this.containerRef.current.focus();
     }
   }

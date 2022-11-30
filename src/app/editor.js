@@ -118,7 +118,10 @@ class Editor extends EventEmitter {
   }
 
   onHover() {
-    return (evt) => this.emit(HOVER, evt);
+    return (evt) => {
+      this.player.focus();
+      this.emit(HOVER, evt);
+    }
   }
 
   onMoveStart() {

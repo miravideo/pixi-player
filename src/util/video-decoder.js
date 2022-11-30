@@ -260,7 +260,7 @@ class MP4Decoder {
     resolve(this.frames);
     // console.log('worker extract cost:', { type,
     //   from: this.frames[0].t.toFixed(3),
-    //   to: this.frames[this.frames.length - 1].t.toFixed(3),
+    //   to: this.frames.at(-1).t.toFixed(3),
     //   len: this.frames.length,
     //   cost_ms: Math.round(performance.now() - this._extractStart)
     // });
@@ -270,7 +270,7 @@ class MP4Decoder {
   }
 
   onSamples(track_id, type, samples) {
-    const last = samples[samples.length - 1];
+    const last = samples.at(-1);
     const lastTime = last.cts / last.timescale;
     // console.log('sample', type, samples.length, last.cts / last.timescale);
     if (type === 'probe') {

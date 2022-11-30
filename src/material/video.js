@@ -85,7 +85,7 @@ class VideoMaterial extends ImageMaterial {
         this.frames.splice(0, i - ksize).map(f => this.closeFrame(f, 'rollover'));
       }
       if (this.frames.length < CACHE_FRAMES) {
-        const lastTime = this.frames[this.frames.length - 1].t;
+        const lastTime = this.frames.at(-1).t;
         if (lastTime < this.info.lastFrame) this.extract(lastTime);
       }
       return frame;

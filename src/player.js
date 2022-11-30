@@ -83,6 +83,10 @@ class PlayerUI {
     return this.store.height;
   }
 
+  focus() {
+    return this.store.focus();
+  }
+
   on(event, callback) {
     this.core.on(event, callback);
   }

@@ -43,7 +43,7 @@ export class EditableTextMetrics extends TextMetrics {
     let after = 0;
     lines.map((l) => after += Array.from(l).length);
     // 最后如果多一个\n，校验的时候减掉，但不去掉
-    if (lines[lines.length - 1].endsWith('\n')) { //
+    if (lines.at(-1).endsWith('\n')) { //
       after -= 1;
     }
 
@@ -148,9 +148,7 @@ export class EditableTextMetrics extends TextMetrics {
       if (collapseSpaces) {
         // check both this and the last tokens for spaces
         const currIsBreakingSpace = TextMetrics.isBreakingSpace(token);
-        const lastIsBreakingSpace = TextMetrics.isBreakingSpace(
-          line[line.length - 1]
-        );
+        const lastIsBreakingSpace = TextMetrics.isBreakingSpace(line.at(-1));
 
         if (currIsBreakingSpace && lastIsBreakingSpace) {
           continue;
@@ -555,8 +553,8 @@ export class EditableText extends Text {
         }
 
         if (style.fill) {
-          const lastLine = chars[chars.length - 1];
-          const lastCharIdx = lastLine ? lastLine[lastLine.length - 1].ci : -1;
+          const lastLine = chars.at(-1);
+          const lastCharIdx = lastLine ? lastLine.at(-1).ci : -1;
           const lineChars = this.drawLetterSpacing(
             lines[i],
             linePositionX,
@@ -688,7 +686,7 @@ export class EditableText extends Text {
       const charStart = li === start.lineIdx ? start.x : 
         (this.chars[li][0]?.left || 0); // todo: align center / right
       const charEnd = li === end.lineIdx ? end.x : 
-        (this.chars[li][this.chars[li].length - 1]?.right || 0);
+        (this.chars[li].at(-1)?.right || 0);
       this.context.fillStyle = this._style.selectionBgColor;
       this.context.fillRect(charStart, this.offsetY + (li * height), charEnd - charStart, height);
     }
@@ -717,7 +715,7 @@ export class EditableText extends Text {
         // prev line
         if (this.selectionEnd.lineIdx > 0) {
           const prevLine = this.chars[this.selectionEnd.lineIdx - 1];
-          const lastChar = prevLine[prevLine.length - 1];
+          const lastChar = prevLine.at(-1);
           // 上一行的lastChar可能是\n，也可能是强制换行的字符，都需要到【左边】
           point = { x: lastChar.left, y: lastChar.top + 1 };
           // console.log('selectMove', lastChar, point);
@@ -727,7 +725,7 @@ export class EditableText extends Text {
         if (this.selectionEnd.lineIdx + 1 < this.chars.length) {
           const line = this.chars[this.selectionEnd.lineIdx];
           // 判断是否有强制换行
-          const key = (line[line.length - 1].char !== '\n') ? 'right' : 'left';
+          const key = (line.at(-1).char !== '\n') ? 'right' : 'left';
           const nextLine = this.chars[this.selectionEnd.lineIdx + 1];
           const firstChar = nextLine[0];
           point = { x: firstChar[key], y: firstChar.top + 1 };
@@ -791,8 +789,7 @@ export class EditableText extends Text {
     let char = this.charOf(index);
     let key = 'left';
     if (!char) {
-      const lastLine = this.chars[this.chars.length - 1];
-      char = lastLine[lastLine.length - 1];
+      char = this.chars.at(-1)?.at(-1);
       key = 'right';
     }
 
