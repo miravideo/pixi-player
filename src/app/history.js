@@ -118,7 +118,7 @@ export class Record extends EventEmitter {
     await Promise.all(updates);
 
     // 新增/删除/时间改动/zIndex改动，需要重新annotate
-    this.player.rootNode.annotate();
+    this.player.rootNode.annotate(this);
 
     // update view after all changes done
     updates = changedNodes.map(async (node) => {

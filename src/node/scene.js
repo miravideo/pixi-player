@@ -17,7 +17,7 @@ class Scene extends Container {
     return view;
   }
 
-  annotate() {
+  annotate(record) {
     const { allNodes } = this;
     let maxAbsEnd = Math.max(...allNodes
       .filter(x => !x.isVirtual && !x.flexibleDuration)
@@ -32,7 +32,7 @@ class Scene extends Container {
     } else {
       this.defaultDuration = '100%';
     }
-    super.annotate();
+    super.annotate(record);
   }
 
   get default() {

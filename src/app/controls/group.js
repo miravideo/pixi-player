@@ -34,8 +34,9 @@ class NodeGroup extends Node {
   async lock(lock=true) {
     if (!this.lockId) this.lockId = uuid();
     const groupId = lock ? this.lockId : undefined;
+    const srcGroupId = lock ? undefined : this.lockId;
     const nodes = Object.values(this.nodes);
-    await this.editor.update(nodes, { groupId }, this.lockId);
+    await this.editor.update(nodes, { groupId, srcGroupId }, this.lockId);
   }
 
   root() {

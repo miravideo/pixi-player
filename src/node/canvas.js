@@ -83,10 +83,10 @@ class Canvas extends Container {
     return this._duration;
   }
 
-  annotate() {
+  annotate(record) {
     // this.initzIndex(); // 重新刷一下zIndex
     const spine = this.children.filter(x => x.type === 'spine')[0];
-    spine.annotate(); // 必须重新annotate，确保正确
+    spine.annotate(record); // 必须重新annotate，确保正确
     let maxEndTime = spine.duration;
     // todo: 如果spine里有一个无限循环的，怎么搞？
     this.allNodes // 计算所有video元素(loop以外)的最后结束时间
@@ -100,7 +100,7 @@ class Canvas extends Container {
     }
     // 可能有child依赖于此, 需要再annotate一下
     this.allNodes.map(node => {
-      node.annotate();
+      node.annotate(record);
     });
 
     // 更新一下显示

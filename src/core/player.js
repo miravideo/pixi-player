@@ -107,9 +107,9 @@ class Player extends EventEmitter {
     }
 
     // annotate
-    this.rootNode.allNodes.map(node => node.annotate);
+    this.rootNode.allNodes.map(node => node.annotate());
+    // todo: allNodes需要重新计算，因为可能还有变化
     this.rootNode.annotate();
-    // allNodes需要重新计算，因为可能mixin.preload之后又有添加
     this.rootNode.allNodes.map(node => {
       this.log(
         `${node.id.padEnd(20, ' ')}: ` +

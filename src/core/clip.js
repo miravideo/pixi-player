@@ -188,7 +188,7 @@ class Clip extends EventEmitter {
     const cacheType = this.cacheType(type);
     if (!this._views[cacheType]) {
       this._views[cacheType] = this.createView();
-      if (cacheType === VIEW_TYPES.play && this.conf.editable !== false) {
+      if (cacheType === VIEW_TYPES.play) {
         this.addViewEvent(this._views[cacheType]);
       }
     }
@@ -793,7 +793,10 @@ class Clip extends EventEmitter {
   }
 
   addViewEvent(view) {
-    if (!view || !(view instanceof DisplayObject) || this.isViewContainer) return;
+    if (!view || !(view instanceof DisplayObject)
+       || this.isViewContainer || this.conf.editable === false) {
+      return;
+    }
     view.interactive = true;
     if (this._events) {
       // todo: unbind old events;

@@ -14,6 +14,7 @@ import Cover from "../node/cover";
 import Mixin from "../node/mixin";
 import Audio from "../node/audio";
 import Graph from "../node/graph";
+import Div from "../node/div";
 import Text from "../node/text";
 
 const TYPES = {
@@ -26,6 +27,7 @@ const TYPES = {
   filter: Filter,
   track: Track,
   container: Container,
+  div: Div,
   scene: Scene,
   cover: Cover,
   audio: Audio,
