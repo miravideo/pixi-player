@@ -152,8 +152,7 @@ class MiraEditorBase extends HTMLElement {
       this.move = { x: x - lastX, y: y - lastY };
       this.moved += norm2d(this.move);
       this.lastPosition = position;
-      if (this.moveListener && this.moveListener.onMove
-         && (this.move.x !== 0 || this.move.y !== 0)) {
+      if (this.moveListener && this.moveListener.onMove && (this.move.x !== 0 || this.move.y !== 0)) {
         this.moveListener.onMove({ target: this, position, moved: this.moved > 5, delta: this.move, event });
       }
     }

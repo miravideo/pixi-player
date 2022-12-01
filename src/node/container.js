@@ -23,6 +23,16 @@ class Container extends Display {
     // covers should update before call drawNodes!
     this._covers = this.allNodes.filter(x => x.type === 'cover');
     await this.drawNodes(time, type);
+
+    // offset as anchor(0.5, 0.5) when animate
+    if (view.animationAttrChange && view.animationAttr.scale) {
+      const attr = {};
+      const { width, height } = this.player;
+      const offset = (1 - view.animationAttr.scale) * 0.5;
+      if (view.animationAttr.x === undefined) attr.x = width * offset;
+      if (view.animationAttr.y === undefined) attr.y = height * offset;
+      view.attr(attr);
+    }
     return view;
   }
 

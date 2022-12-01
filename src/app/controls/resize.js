@@ -69,7 +69,11 @@ class Resize extends Move {
     if (!this.node || !this.box) return;
     const delta = this.getDelta(event);
     if (Math.round(delta.width) === 0 && Math.round(delta.height) === 0) return;
-    if (this.node.width + delta.width < 1 || this.node.height + delta.height < 1) return;
+    const nodeView = this.node.getView();
+    // 限制最小尺寸不要太小
+    if (!nodeView || nodeView.width + delta.width < 10
+       || nodeView.height + delta.height < 10
+       || nodeView.relativeScale && nodeView.relativeScale.x * (1 + delta.scale) < 0.01) return;
     const attrs = {};
     if (this.node.type === 'text' && delta.height) {
       // text高度变了，就把font-size也一起变了(等比例)

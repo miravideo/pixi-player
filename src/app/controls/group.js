@@ -16,6 +16,7 @@ class NodeGroup extends Node {
     this.isVirtual = true;
     this.nodes = {};
     this.boxes = {};
+    this._att = {};
     this.initContainer();
     if (Array.isArray(nodes)) nodes.map(node => this.toggleNode(node));
     else if (typeof nodes === 'object') this.toggleNode(nodes);
@@ -117,12 +118,12 @@ class NodeGroup extends Node {
       this._rotation = this._change.rotation;
     }
 
-    if (this._change.x !== undefined || this._change.y !== undefined) {
-      const [x, y] = [this._change.x || this.x, this._change.y || this.y];
-      positionDelta = { x: x - this.x, y: y - this.y };
-      this._metrcs_.position[0] = x;
-      this._metrcs_.position[1] = y;
-    }
+    // if (this._change.x !== undefined || this._change.y !== undefined) {
+    //   const [x, y] = [this._change.x || this.x, this._change.y || this.y];
+    //   positionDelta = { x: x - this.x, y: y - this.y };
+    //   this._metrcs_.position[0] = x;
+    //   this._metrcs_.position[1] = y;
+    // }
 
     if (this._change.width !== undefined || this._change.height !== undefined) {
       const [w, h] = [this._change.width || this.width, this._change.height || this.height];
@@ -134,6 +135,13 @@ class NodeGroup extends Node {
       }
       this._metrcs_.size[0] = w;
       this._metrcs_.size[1] = h;
+
+    // scale的时候不变anchor中心
+    } else if (this._change.x !== undefined || this._change.y !== undefined) {
+      const [x, y] = [this._change.x || this.x, this._change.y || this.y];
+      positionDelta = { x: x - this.x, y: y - this.y };
+      this._metrcs_.position[0] = x;
+      this._metrcs_.position[1] = y;
     }
 
     const anchor = this.metrcs().position;
