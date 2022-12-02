@@ -79,9 +79,16 @@ class Fit extends Move {
       Fit.apply(this.node, { to: { flipY: !this.node.conf.flipY } }, 'resize');
       this.node.emit(CHANGING, {action: OP_END});
     } else if (event.target.hasClass('group')) {
-      await this.node.lock(!this.node.groupLocked);
-      this.show(true);
-      this.box.refresh();
+      const lock = !this.node.groupLocked;
+      await this.node.lock(lock);
+      if (lock) {
+        this.show(true);
+        this.box.refresh();
+      } else {
+        this.box.removeClass('group-locked');
+        // unselect all after unlock
+        this.lock(300, () => this.editor.emit(SELECT), 'group-lock');
+      }
     } else if (event.target.hasClass('regroup')) {
       const {srcGroupId} = this.node.conf;
       if (!srcGroupId) return;

@@ -6,8 +6,6 @@ const MiraEditorBox = require('../views/select-view');
 const BaseControl = require('./base');
 const NodeGroup = require('./group');
 
-const MULTI_KEYS = ['Meta', 'Control'];
-
 class Select extends BaseControl {
   static type = "select";
   constructor(editor) {
@@ -48,7 +46,7 @@ class Select extends BaseControl {
       // 文字编辑模式下，不响应这些事件了
       if (this.editor.controls.move.editMode) return;
       const lockKey = 'keyboard';
-      if (MULTI_KEYS.includes(evt.key)) return this.enableMulti(true);
+      if (evt.mctrlKey) return this.enableMulti(true);
       const key = `${evt.key}`.toLowerCase();
       const canRespond = true;//this.editor.responder === this.constructor.type;
       if (this.locked(lockKey)) return evt.preventDefault();
@@ -68,7 +66,7 @@ class Select extends BaseControl {
 
   onKeyUp() {
     return (evt) => {
-      if (MULTI_KEYS.includes(evt.key)) this.enableMulti(false);
+      if (evt.mctrlKey) this.enableMulti(false);
       const key = `${evt.key}`.toLowerCase();
       this.onKey(key, evt);
     }
@@ -93,6 +91,10 @@ class Select extends BaseControl {
   onHover() {
     return (evt) => {
       (evt.type === 'mouseout') ? this.hideHover() : this.showHover(evt.target, evt);
+      // adjust withMulti state
+      if (evt.data?.originalEvent && this.withMulti != evt.data.originalEvent.mctrlKey) {
+        this.enableMulti(evt.data.originalEvent.mctrlKey);
+      }
     }
   }
 
