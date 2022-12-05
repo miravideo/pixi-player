@@ -44,12 +44,14 @@ const encodeLocalFile = async (dict, files={}) => {
 }
 
 const Draft = {
-  async list() {
+  async list(sortBy='updated', asc='desc') {
     const lst = [];
     await localforage.iterate((item, key) => {
       item.key = key;
       lst.push(item);
     });
+    const r = asc === 'asc' ? 1 : -1;
+    lst.sort((a, b) => a[sortBy] === b[sortBy] ? 0 : (a[sortBy] > b[sortBy] ? 1 * r : -1 * r));
     return lst;
   },
   async load(key) {

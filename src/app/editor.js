@@ -262,6 +262,27 @@ class Editor extends EventEmitter {
     return node;
   }
 
+  async save(name) {
+    const item = this.draft || {};
+    if (name) item.name = name;
+    return this.draft = await Draft.save(this.rootNode, item);
+  }
+
+  async getDrafts(sort, asc) {
+    return await Draft.list(sort, asc);
+  }
+
+  async loadDraft(key) {
+    const item = await Draft.load(key);
+    const opts = {...this.player.options};
+    opts.value = item.data;
+    for (const k of ['width', 'height']) {
+      delete opts[k];
+    }
+    this.player.load(opts);
+    return this.draft = item;
+  }
+
   destroy() {
     this.player = null;
   }
