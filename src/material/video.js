@@ -171,7 +171,7 @@ class VideoMaterial extends ImageMaterial {
       ctx.drawImage(frame.data, 0, 0, width, height);
       view.source = this.canvas;
     } catch (e) {
-      console.error(e);
+      // console.error(e);
       // console.log('error!', this.node.id, nodeTime, time, frame);
     }
     // const lag = frame ? (frame.t - time).toFixed(3) : 'none';

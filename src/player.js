@@ -63,6 +63,10 @@ class PlayerUI {
     this.store.hideLoading();
   }
 
+  togglePlay() {
+    this.store.togglePlay();
+  }
+
   get core() {
     return this.store.player;
   }

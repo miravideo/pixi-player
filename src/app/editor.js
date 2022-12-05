@@ -120,16 +120,23 @@ class Editor extends EventEmitter {
   onHover() {
     return (evt) => {
       this.player.focus();
+      if (this.core.playing) return;
       this.emit(HOVER, evt);
     }
   }
 
   onMoveStart() {
-    return (evt) => this.emit(SELECT, evt);
+    return (evt) => {
+      if (this.core.playing) {
+        return this.core.pause();
+      }
+      this.emit(SELECT, evt);
+    }
   }
 
   onMoveEnd() {
     return (evt) => {
+      if (this.core.playing) return;
       // debounce click
       this.controls.select.lock(30, null, 'click');
     }
@@ -149,7 +156,12 @@ class Editor extends EventEmitter {
   }
 
   onKeyUp() {
-    return (evt) => this.emit(KEYUP, evt);
+    return (evt) => {
+      this.emit(KEYUP, evt);
+      if (evt.code === 'Space' && !this.controls.move.editMode) {
+        this.player.togglePlay();
+      }
+    }
   }
 
   onResize() {
@@ -171,6 +183,10 @@ class Editor extends EventEmitter {
     const rs = await this.player.redo(n);
     if (rs.changed) this.emit(HISTORY, {...rs, op: 'redo'});
     else this.emit(SELECT); // unselect
+  }
+
+  get core() {
+    return this.player.core;
   }
 
   get rootNode() {
@@ -221,7 +237,7 @@ class Editor extends EventEmitter {
     const node = new src.constructor({...src.conf, refId: null, id: null});
     if (src.type === 'mixin' && src.mixinType) {
       // init mixin!!!
-      await this.player.core.initMixin(src.mixinType, node);
+      await this.core.initMixin(src.mixinType, node);
     }
     node.parent = src.parent; // tmp parent, just set for annotate
     node.copySourceId = src.id;

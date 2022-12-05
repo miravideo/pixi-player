@@ -58,8 +58,6 @@ class Text extends Display {
     //   this.setConfRpx('width', this.display.width);
     // }
 
-    this.setAlign();
-
     // console.log('xxx', this.id, view.width, view.height, view.scale);
 
     return view;
@@ -182,20 +180,20 @@ class Text extends Display {
     return LOAD_FONTS[font];
   }
 
-  setAlign(init=false) {
-    // const { align, valign } = this;
-    // const ax = ALIGN_MAP[align] !== undefined ? ALIGN_MAP[align] : 0.5;
-    // const ay = VALIGN_MAP[valign] !== undefined ? VALIGN_MAP[valign] : 0.5;
-    // if (this.anchorX != ax || this.anchorY != ay) {
-    //   if (!init) {
-    //     let { x, y, width, height } = this;
-    //     x += (ax - this.anchorX) * width;
-    //     y += (ay - this.anchorY) * height;
-    //     this.setXY(x, y);
-    //   }
-    //   this.setAnchor(ax, ay);
-    // }
-  }
+  // setAlign(init=false) {
+  //   const { align, valign } = this;
+  //   const ax = ALIGN_MAP[align] !== undefined ? ALIGN_MAP[align] : 0.5;
+  //   const ay = VALIGN_MAP[valign] !== undefined ? VALIGN_MAP[valign] : 0.5;
+  //   if (this.anchorX != ax || this.anchorY != ay) {
+  //     if (!init) {
+  //       let { x, y, width, height } = this;
+  //       x += (ax - this.anchorX) * width;
+  //       y += (ay - this.anchorY) * height;
+  //       this.setXY(x, y);
+  //     }
+  //     this.setAnchor(ax, ay);
+  //   }
+  // }
 
   get displayOffset() {
     // const view = this.getView();

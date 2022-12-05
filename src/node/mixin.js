@@ -5,6 +5,7 @@ import FrameNode from "../mixin/frame";
 import Builder from "../core/builder";
 import STATIC from "../core/static";
 import Utils from '../util/utils';
+import XhrUtil from '../util/xhr';
 import PluginUtil from '../util/plugin';
 
 class Mixin extends Display {
@@ -16,8 +17,12 @@ class Mixin extends Display {
     PluginUtil.extends({plugin: mixin, to: this});
     this.mixinType = type;
     this.id = Utils.genId(type); // re-gen id
+    if (this.node) {
+      this.removeChild(this.node);
+      this.node.destroy(); // release old ones
+    }
     if (this.createNode) {
-      let node = this.createNode();
+      let node = await this.createNode();
       if (!(typeof(node) === 'object' && node.annotate)) {
         const {node: _node, cachePromise} = Builder.from(node);
         await cachePromise;
@@ -66,6 +71,17 @@ class Mixin extends Display {
     }
     return view;
   }
+
+  async getRemoteData(url, parseJson = true) {
+    try {
+      const resp = await XhrUtil.getRemote(url, this.player.id);
+      const text = await resp.data.text();
+      return parseJson ? JSON.parse(text) : text;
+    } catch (e) {
+      return null;
+    }
+  }
+
 }
 
 Mixin.extends(ViewNode);
