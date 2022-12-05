@@ -95,6 +95,7 @@ export class Record extends EventEmitter {
         entries = [...entries.filter(x => x[0] !== 'parent'), ['parent', changeAttr['parent']]];
       }
 
+      // console.log('update', node.id, changeAttr);
       // set conf
       for (const [k, val] of entries) {
         node.setConf(k, val.to); // autounit = true

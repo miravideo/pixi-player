@@ -193,7 +193,7 @@ class Constraint extends BaseControl {
     const k = (to % 180 === 0) ? 'x' : 'y';
     if (Math.abs(rotation % 90) < this.limit * 0.5) {
       const refKey = `rot_${to}`;
-      evt.delta = { x: 0, y: 0 }; // 比较难计算，直接设置了
+      evt.delta = null; // 比较难计算逆运算delta，直接设置了
       if (!this.ref[k] || this.ref[k] !== refKey) {
         this.editor.update([node], { rotation: rad(to) }, this.selector.selectedBox.uuid);
         this.ref[k] = refKey;

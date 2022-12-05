@@ -26,7 +26,12 @@ const ViewNode = {
       let val = this.getConf(key);
       if (aliasMapping[key]) {
         const _val = this.getConf(aliasMapping[key]);
-        if (_val !== undefined) val = _val;
+        if (_val !== undefined) {
+          val = _val;
+          // 把key改过去
+          this.conf[key] = this.conf[aliasMapping[key]];
+          delete this.conf[aliasMapping[key]];
+        }
       }
       if (val !== undefined) attrs[key] = val;
     }

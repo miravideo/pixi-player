@@ -26,6 +26,7 @@ class Rotate extends Move {
   updateShow(box) { }
 
   getDelta(event) {
+    if (!event.delta || !event.position) return;
     if (!this.boxAnchor) {
       const { left, top } = this.editor.container.getBoundingClientRect();
       let { x, y } = this.box.position;
@@ -45,7 +46,8 @@ class Rotate extends Move {
 
   async onMove(event) {
     if (!this.node || !this.box) return;
-    await this.update(this.getDelta(event));
+    const delta = this.getDelta(event);
+    if (delta) await this.update(delta);
     this.box.rotate();
     this.toast(`${deg(this.box.rotation, 0)}°`, 1000);
   }
