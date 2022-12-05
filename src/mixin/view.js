@@ -24,11 +24,11 @@ const ViewNode = {
     const attrs = {};
     for (const key of keys) {
       let val = this.getConf(key);
-      if (aliasMapping[key]) {
+      if (this.conf[key] === undefined && aliasMapping[key]) {
         const _val = this.getConf(aliasMapping[key]);
         if (_val !== undefined) {
           val = _val;
-          // 把key改过去
+          // 把key改过去, alias只用来兼容老的数据一次性读取
           this.conf[key] = this.conf[aliasMapping[key]];
           delete this.conf[aliasMapping[key]];
         }
