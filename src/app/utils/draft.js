@@ -54,6 +54,9 @@ const Draft = {
     lst.sort((a, b) => a[sortBy] === b[sortBy] ? 0 : (a[sortBy] > b[sortBy] ? 1 * r : -1 * r));
     return lst;
   },
+  async delete(key) {
+    await localforage.removeItem(key);
+  },
   async load(key) {
     const item = await localforage.getItem(key);
     if (item.data && item.files) decodeLocalFile(item.data, item.files);

@@ -268,8 +268,12 @@ class Editor extends EventEmitter {
     return this.draft = await Draft.save(this.rootNode, item);
   }
 
-  async getDrafts(sort, asc) {
+  async allDrafts(sort, asc) {
     return await Draft.list(sort, asc);
+  }
+
+  async delDraft(key) {
+    return await Draft.delete(key);
   }
 
   async loadDraft(key) {
