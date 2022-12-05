@@ -6,6 +6,7 @@ import Queue from '../util/queue';
 import CacheUtil from '../util/cache';
 import XhrUtil from '../util/xhr';
 import AudioUtil from '../util/audio';
+import ImageUtils from '../util/image';
 // import VideoHolder from '../util/video';
 import VideoSource from '../util/video-source';
 import STATIC from './static';
@@ -363,6 +364,24 @@ class Player extends EventEmitter {
     return buffer;
   }
 
+  async getPreviewImage(node, time, opts={}) {
+    if (!this.previewQueue) this.previewQueue = new Queue();
+    return this.previewQueue.enqueue(async () => {
+      const { width: w, height: h } = this;
+      const vtype = STATIC.VIEW_TYPE_BURN;
+      const burner = this.burnerRenderer(w, h);
+      const view = node.getView(vtype);
+      // console.log({burner, vtype, view});
+      await node.draw(time, vtype);
+      burner.render(view);
+      // todo: frame of bounds?
+      const frame = node.isViewContainer ? 
+        { x: 0, y: 0, w, h } : 
+        { x: view.x, y: view.y, w: view.width, h: view.height };
+      return ImageUtils.subImage(burner.view, frame, opts);
+    });
+  }
+
   async getFrameImageData(time, opts={}) {
     const { width: w, height: h } = this;
 
@@ -370,12 +389,6 @@ class Player extends EventEmitter {
     const burner = this.app.renderer;
     await this.rootNode.draw(time, STATIC.VIEW_TYPE_SEEK);
     this.app.render();
-
-    // const vtype = STATIC.VIEW_TYPE_BURN;
-    // const burner = this.burnerRenderer(vtype, w, h);
-    // const view = this.rootNode.getView(vtype);
-    // await this.rootNode.draw(time, vtype);
-    // burner.render(view);
 
     if (opts?.format === 'bitmap') {
       return await createImageBitmap(burner.view);

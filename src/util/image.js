@@ -139,6 +139,33 @@ const ImageUtils = {
       });
     });
   },
+  subImage(src, frame, { width, height, format='jpeg', fit='cover', bgColor='#000000' }={}) {
+    if (!frame && src.width && src.height) {
+      frame = { x: 0, y: 0, w: src.width, h: src.height };
+    }
+    if (!width && !height) {
+      width = frame.w;
+      height = frame.h;
+    } else if (!width) {
+      width = (frame.w / frame.h) * height;
+    } else if (!height) {
+      height = (frame.h / frame.w) * width;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const f = (fit === 'cover' ? 'max' : 'min');
+    if (f !== 'max') {
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, width, height);
+    }
+    const scale = Math[f](width / frame.w, height / frame.h);
+    const [vw, vh] = [frame.w * scale, frame.h * scale];
+    ctx.drawImage(src, frame.x, frame.y, frame.w, frame.h,
+      (width - vw) / 2, (height - vh) / 2, vw, vh);
+    return format === 'canvas' ? canvas : canvas.toDataURL(`image/${format}`);
+  }
 }
 
 export default ImageUtils;

@@ -152,7 +152,7 @@ class Canvas extends Container {
       json.children.map(x => this.xml(x, subindt)) : [];
     if (json.type === 'text' && json.text) {
       // hardcode
-      children.push(`${" ".repeat(subindt)}<content>${json.text}</content>\n`);
+      children.push(`${" ".repeat(subindt)}<content><![CDATA[${json.text}]]></content>\n`);
       delete json.text;
       delete json.content;
     }

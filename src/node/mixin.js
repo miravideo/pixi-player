@@ -82,6 +82,15 @@ class Mixin extends Display {
     }
   }
 
+  draftChildren() {
+    return this.children.filter(x => x != this.node);
+  }
+
+  toJson(asTemplate=false) {
+    const json = super.toJson(asTemplate);
+    json.type = this.mixinType;
+    return json;
+  }
 }
 
 Mixin.extends(ViewNode);

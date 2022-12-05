@@ -754,6 +754,10 @@ class Clip extends EventEmitter {
     return { volume, audioFrame };
   }
 
+  draftChildren() {
+    return this.children;
+  }
+
   toJson(asTemplate=false) {
     const conf = JSON.parse(JSON.stringify(this.conf));
     for (const key of Object.keys(conf)) {
@@ -761,17 +765,21 @@ class Clip extends EventEmitter {
     }
     delete conf.srcFile;
     delete conf.innerHTML;
-    if (this.children && Array.isArray(this.children)) {
-      conf.children = this.children.map(c => c.toJson(asTemplate));
+    const children = this.draftChildren();
+    if (children && Array.isArray(children)) {
+      conf.children = children.map(c => c.toJson(asTemplate));
     }
     const removeInnerHTML = (x) => {
       if (!x) return;
+      const val = x.innerHTML;
       for (const [k, v] of Object.entries(x)) {
         if (k === 'innerHTML' || k === '_nodeName' || k === '_type') delete x[k];
         else if (v && typeof(v) === 'object') {
-          removeInnerHTML(v);
+          x[k] = removeInnerHTML(v);
         }
       }
+      if (Object.keys(x).length === 1 && x.type && val) return val;
+      return x;
     }
     removeInnerHTML(conf);
     return conf;
@@ -835,6 +843,10 @@ class Clip extends EventEmitter {
       e.target = this;
       this.player.emit('moveend', e);
     }
+  }
+
+  async previewImage(time, opts={}) {
+    return await this.player.getPreviewImage(this, time, opts);
   }
 
   destroy() {

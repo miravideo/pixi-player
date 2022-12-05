@@ -7,6 +7,7 @@ import Crop from './controls/crop';
 import Fit from './controls/fit';
 import Constraint from './controls/constraint';
 import { color } from './utils/color';
+import Draft from './utils/draft';
 import md5 from "md5";
 const { HISTORY, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX } = require('./utils/static');
 

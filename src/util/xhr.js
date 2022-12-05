@@ -3,6 +3,11 @@ import localforage from 'localforage';
 import Utils from './utils';
 import Queue from './queue';
 
+localforage.config({
+  name: 'PIXI-Player-Cache',
+  storeName: 'pixi_player_cache',
+});
+
 const q = new Queue();
 const __cache = {};
 const __req = {};
@@ -15,7 +20,7 @@ if (global) {
 // clear outdate cache
 const now = Date.now();
 localforage.iterate((item, key) => {
-  if (now - item.updated < 15 * 86400 * 1000) return;
+  if (!item.updated || now - item.updated < 15 * 86400 * 1000) return;
   localforage.removeItem(key);
 });
 
