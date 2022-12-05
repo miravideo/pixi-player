@@ -187,6 +187,14 @@ class Editor extends EventEmitter {
     else this.emit(SELECT); // unselect
   }
 
+  get canUndo() {
+    return this.player.canUndo;
+  }
+
+  get canRedo() {
+    return this.player.canRedo;
+  }
+
   get core() {
     return this.player.core;
   }

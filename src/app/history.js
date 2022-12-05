@@ -169,6 +169,14 @@ export class History extends EventEmitter {
     this._index = 0;
   }
 
+  get canUndo() {
+    return this._index > 0;
+  }
+
+  get canRedo() {
+    return this._index < this._records.length;
+  }
+
   append(record) {
     if (record.isEmpty()) return;
     if (this.length > this._index) { // remove future records

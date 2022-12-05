@@ -152,6 +152,14 @@ class PlayerUI {
     });
   }
 
+  get canUndo() {
+    return this.history.canUndo;
+  }
+
+  get canRedo() {
+    return this.history.canRedo;
+  }
+
   editable(enable) {
     this.store.editable(enable);
     if (!this.editor) this.editor = new Editor(this);
