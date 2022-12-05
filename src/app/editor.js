@@ -128,7 +128,9 @@ class Editor extends EventEmitter {
   onMoveStart() {
     return (evt) => {
       if (this.core.playing) {
-        return this.core.pause();
+        this.core.pause();
+        if (evt.target) this.emit(HOVER, { target: evt.target, type: 'mouseover' });
+        return;
       }
       this.emit(SELECT, evt);
     }

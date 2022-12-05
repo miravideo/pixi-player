@@ -403,7 +403,7 @@ export class EditableText extends Text {
     const mh = Math.ceil(Math.ceil((Math.max(1, style.dropShadowContain ? height : textHeight) + (style.padding * 2))) * this._resolution);
     this.canvas.width = this.targetWidth || mw;
     this.canvas.height = this.targetHeight || mh;
-    // console.log({mw, tw: this.targetWidth});
+    // console.log({mw, tw: this.targetWidth, mh, th: this.targetHeight});
 
     let alignOffsetX = 0, alignOffsetY = 0;
     if (style.align === 'right') {

@@ -234,7 +234,7 @@ class Move extends BaseControl {
   }
 
   textEditStart(event) {
-    if (!this.view) return;
+    if (!this.view || this.node.getConf('textEditable') === false) return;
     this.view.addClass('editMode');
     this.box.addClass('editMode');
     this.node.editMode = true;

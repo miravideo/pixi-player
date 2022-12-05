@@ -75,7 +75,7 @@ class Resize extends Move {
        || nodeView.height + delta.height < 10
        || nodeView.relativeScale && nodeView.relativeScale.x * (1 + delta.scale) < 0.01) return;
     const attrs = {};
-    if (this.node.type === 'text' && delta.height) {
+    if (this.node.type === 'text' && delta.width) {
       // text高度变了，就把font-size也一起变了(等比例)
       const { height } = this.getViewAttr({ height: 0 });
       attrs.fontSize = this.node.fontSize * (1 + (delta.height / height));
