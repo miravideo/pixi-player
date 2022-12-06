@@ -174,6 +174,7 @@ class Burner extends EventEmitter {
   }
 
   async destroy() {
+    this.removeAllListeners();
     this.cancel();
     if (this.queue) this.queue.destroy();
     this.queue = null;

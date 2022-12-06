@@ -453,6 +453,7 @@ class Store extends EventEmitter {
   }
 
   destroy() {
+    this.removeAllListeners();
     this.containerRef = null;
     this.canvasRef = null;
     this.editorRef = null;

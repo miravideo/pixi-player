@@ -561,6 +561,7 @@ class Player extends EventEmitter {
     // stop
     if (this.app) this.app.stop();
     this.stopAudio();
+    this.removeAllListeners();
 
     if (this.previewQueue) this.previewQueue.destroy();
     this.previewQueue = null;

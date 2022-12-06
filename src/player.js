@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import EventEmitter from "eventemitter3";
 import { App } from "./app/index";
 import Store from "./app/store";
 import { History, Record } from "./app/history";
@@ -8,14 +9,16 @@ import Queue from "./util/queue";
 import Editor from "./app/editor";
 import { uuid } from "./app/utils/data";
 
-class PlayerUI {
-  constructor(container, options) {
-    this.container = container;
+const PLAYER_EVENTS = [
+  'burning', 'click', 'keydown', 'keyup', 'resize', 'hover', 'movestart', 'moveend',
+  'timeupdate', 'ended', 'loadedmetadata', 'seeking', 'seeked', 'playing', 'play', 'pause',
+];
 
-    // init history
-    this._queue = new Queue();
-    this._history = new History();
-    this._changed = false;
+export class PlayerUI extends EventEmitter {
+  constructor(container, options) {
+    super();
+
+    this.container = container;
 
     this.load(options);
     if (options.editable) this.editable(true);
@@ -36,7 +39,7 @@ class PlayerUI {
     this.resizeObserver.observe(container);
   }
 
-  load(options) {
+  async load(options) {
     if (this.store) {
       try {
         this.store.destroy();
@@ -44,11 +47,32 @@ class PlayerUI {
       ReactDOM.unmountComponentAtNode(this.container);
     }
 
+    // init history
+    if (this._queue) this._queue.destroy();
+    if (this._history) this._history.destroy();
+    this._queue = new Queue();
+    this._history = new History();
+    this._changed = false;
+
     const { width, height } = Utils.innerSize(this.container);
     options = {width, height, ...(options || {})};
     this.store = new Store(options);
     ReactDOM.render(<App store={this.store}/>, this.container);
-    this.store.load();
+
+    // bind events
+    for (const evt of PLAYER_EVENTS) {
+      this.core.on(evt, this.onEvent(evt));
+    }
+    for (const evt of Object.values(History.EVENTS)) {
+      this._history.on(evt, this.onEvent(evt));
+    }
+
+    await this.store.load();
+    this.emit('loaded');
+  }
+
+  onEvent(type) {
+    return (e) => this.emit(type, e);
   }
 
   toast(msg, durationInMs) {
@@ -89,18 +113,6 @@ class PlayerUI {
 
   focus() {
     return this.store.focus();
-  }
-
-  on(event, callback) {
-    this.core.on(event, callback);
-  }
-
-  off(event, callback) {
-    this.core.off(event, callback);
-  }
-
-  once(event, callback) {
-    this.core.once(event, callback);
   }
 
   get options() {
@@ -198,11 +210,12 @@ class PlayerUI {
     this._queue = null;
     if (this.editor) this.editor.destroy();
     this.editor = null;
+    this.removeAllListeners();
   }
 }
 
 const PixiPlayer = global['pixi-player'];
-if (!PixiPlayer['init']) {
+if (PixiPlayer && !PixiPlayer['init']) {
   PixiPlayer['init'] = (container, options) => {
     return new PlayerUI(container, options);
   }

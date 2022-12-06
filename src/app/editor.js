@@ -49,6 +49,7 @@ class Editor extends EventEmitter {
       moveend: this.onMoveEnd(),
       keydown: this.onKeyDown(),
       keyup: this.onKeyUp(),
+      loaded: this.onLoad(),
     }
     for (const [evt, func] of Object.entries(this.events)) {
       this.player.on(evt, func);
@@ -57,17 +58,7 @@ class Editor extends EventEmitter {
     const options = { ...DEFAULT_OPTS, ...this.player.options };
     this.opts = options;
 
-    const { container } = this;
-    const colors = {
-      '--miraeBorderColor': color(options.majorColor, 100),
-      '--miraeCropBorderColor': color(options.cropColor, 100),
-      '--miraeSelBorderColor': color(options.selectedColor, 100),
-      '--miraeRefLineColor': color(options.refLineColor, 100),
-      '--miraeHighlightColor': color(options.highlightColor, 100),
-    };
-    for (const [k, v] of Object.entries(colors)) {
-      container.style.setProperty(k, v);
-    }
+    this.initContainer();
 
     const controls = options.editorControls;
     DEFAULT_CONTROLS.filter(klass => {
@@ -79,6 +70,20 @@ class Editor extends EventEmitter {
 
     if (options.autoSave) {
       this.autoSave();
+    }
+  }
+
+  initContainer() {
+    const { container, opts } = this;
+    const colors = {
+      '--miraeBorderColor': color(opts.majorColor, 100),
+      '--miraeCropBorderColor': color(opts.cropColor, 100),
+      '--miraeSelBorderColor': color(opts.selectedColor, 100),
+      '--miraeRefLineColor': color(opts.refLineColor, 100),
+      '--miraeHighlightColor': color(opts.highlightColor, 100),
+    };
+    for (const [k, v] of Object.entries(colors)) {
+      container.style.setProperty(k, v);
     }
   }
 
@@ -109,6 +114,10 @@ class Editor extends EventEmitter {
 
   hideLoading() {
     this.player.hideLoading();
+  }
+
+  onLoad() {
+    return (evt) => this.initContainer();
   }
 
   onTimeUpdate() {
@@ -313,6 +322,7 @@ class Editor extends EventEmitter {
 
   destroy() {
     this.player = null;
+    this.removeAllListeners();
   }
 }
 

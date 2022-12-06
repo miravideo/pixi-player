@@ -193,14 +193,12 @@ class Crop extends Move {
 
   onMoveStart(event) {
     if (!this.canMove) return;
-    this.node.emit(CHANGING, {action: `${this.constructor.type}start`});
     this._controls.cropped.showGrid();
     return this;
   }
 
   onMoveEnd(event) {
     if (!this.canMove) return;
-    this.node.emit(CHANGING, {action: `${this.constructor.type}end`});
     return this;
   }
 

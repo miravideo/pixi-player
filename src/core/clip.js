@@ -852,6 +852,7 @@ class Clip extends EventEmitter {
   }
 
   destroy() {
+    this.removeAllListeners();
     this.destroied = true;
     this.clearViewCache();
     this.conf = null;
