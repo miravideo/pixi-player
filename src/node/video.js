@@ -28,9 +28,6 @@ class Video extends Image {
       // 因为存在trans补帧，按照实际onTime来决定是否mute (而不是drawTime)
       // this.mute(!this.onShow(absTime));
     } else {
-      if (absTime > this.absDrawEndTime && type.startsWith(STATIC.VIEW_TYPE_BURN)) {
-        this.material.velease(type);
-      }
       const dt = absTime - this.absDrawStartTime;
       if (-1 < dt && dt < 0 && playing) {
         this.material.prepare(this.absDrawStartTime - this.absStartTime, type);

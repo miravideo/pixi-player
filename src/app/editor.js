@@ -9,15 +9,16 @@ import Constraint from './controls/constraint';
 import { color } from './utils/color';
 import Draft from './utils/draft';
 import md5 from "md5";
-const { HISTORY, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX } = require('./utils/static');
+const { HISTORY, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX, SAVED } = require('./utils/static');
 
 const DEFAULT_OPTS = {
+  autoSave: false,
   majorColor: '#1FB0F9', selectedColor: '#1FB0F9', highlightColor: '#B2B5B6',
   cropColor: '#E33', refLineColor: '#F8DD0B',
   textSelectionColor: '#7FD4FF', textCursorColor: '#EFEFEF',
   refLineRange: 10, canvasMarginRef: 0,
   enableCanvasConstraint: true,
-  debugCanvasConstraint: false,
+  debugCanvasConstraint: false, 
 };
 
 /**
@@ -75,6 +76,10 @@ class Editor extends EventEmitter {
     }).map(klass => {
       return this.controls[klass.type.toLowerCase()] = new klass(this);
     });
+
+    if (options.autoSave) {
+      this.autoSave();
+    }
   }
 
   get container() {
@@ -175,6 +180,10 @@ class Editor extends EventEmitter {
     return this.controls.select.selected;
   }
 
+  get changed() {
+    return this.player.history.length > 0;
+  }
+
   // history
   async undo(n=1) {
     const rs = await this.player.undo(n);
@@ -241,7 +250,9 @@ class Editor extends EventEmitter {
   }
 
   async update(nodes, attrs, senderId, sync) {
-    return await this.player.update(nodes, attrs, senderId, sync);
+    const res = await this.player.update(nodes, attrs, senderId, sync);
+    if (this.opts.autoSave) this.autoSave();
+    return res;
   }
 
   async cloneNode(src) {
@@ -262,10 +273,23 @@ class Editor extends EventEmitter {
     return node;
   }
 
+  autoSave(delay=3) {
+    const t = Number(this.opts.autoSave) > 1 ? Number(this.opts.autoSave) : 30;
+    this.controls.select
+      .lock(t * 1000, () => {
+        this.autoSave();
+      }, 'autoSave')
+      .lock(delay * 1000, () => {
+        if (this.changed) this.save();
+      }, 'delaySave');
+  }
+
   async save(name) {
     const item = this.draft || {};
     if (name) item.name = name;
-    return this.draft = await Draft.save(this.rootNode, item);
+    this.draft = await Draft.save(this.rootNode, item);
+    this.emit(SAVED, this.draft);
+    return this.draft;
   }
 
   async allDrafts(sort, asc) {

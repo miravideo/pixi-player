@@ -1,5 +1,6 @@
 import md5 from 'md5';
 import localforage from 'localforage';
+import { uuid } from './data';
 
 localforage.config({
   name: 'PIXI-Player-Draft',
@@ -65,7 +66,7 @@ const Draft = {
   async save(rootNode, item={}) {
     [item.data, item.files] = await encodeLocalFile(rootNode.toJson(true));
     const json = JSON.stringify(item.data);
-    item.key = item.key || md5(json);
+    item.key = item.key || uuid();
     item.updated = Date.now();
     item.created = item.created || item.updated;
     item.image = await rootNode.previewImage(0.001, { width: 300, height: 300, fit: 'contain' });
@@ -78,6 +79,7 @@ const Draft = {
     // img.src = item.image;
     // document.body.append(img);
     localforage.setItem(item.key, item);
+    // console.log('draft saved', item);
     return item;
   },
 }

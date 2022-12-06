@@ -66,7 +66,7 @@ DisplayObject.mixin({
         // [BUG] Container with SimpleFilter will flipY of the transition filter
         view.filters[0].setFlip(!(this.filters && this.filters[0] instanceof SimpleFilter));
       }
-      // console.log('addView', `${view.refId} -> ${this.refId}`);
+      // console.log('addView', view.id, `${view.refId} -> ${this.refId}`);
       this.addChild(view);
     }
   },
@@ -246,7 +246,7 @@ class Clip extends EventEmitter {
         this.parent.setMask(absTime, type, view);
       } else {
         const vp = this.getViewParent(absTime, type);
-        // console.log('onDraw', this.id, absTime, vp);
+        // console.log('onDraw', this.id, absTime, vp?.refId);
         if (vp) vp.addView(view);
       }
       return view;
@@ -277,12 +277,14 @@ class Clip extends EventEmitter {
   updateView() {
     const view = this.parent ? this.getView() : null;
     // clear other type cache
-    Object.values(this._views).map(v => {
-      if (!v || v === view) return;
+    for (const [k, v] of Object.entries(this._views)) {
+      if (!v || v === view) continue;
       try {
+        if (v.parent) v.parent.removeChild(v);
         v.destroy(true);
       } catch (e) {}
-    });
+      delete this._views[k];
+    }
     return view;
   }
 

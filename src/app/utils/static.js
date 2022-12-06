@@ -10,6 +10,8 @@ module.exports = {
   KEYDOWN: 'keydown',
   KEYUP: 'keyup',
   CROPFRAME: 'crop-frame',
+  SAVED: 'saved',
+
   OP_ADD: 'op_add',
   OP_SPLIT: 'op_split',
   OP_MOVE: 'op_move',

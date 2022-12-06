@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import { Application, settings, ENV, Renderer } from "pixi.js";
+import { Application, settings, ENV, Renderer, RenderTexture } from "pixi.js";
 import Builder from "../core/builder";
 import Utils from '../util/utils';
 import Queue from '../util/queue';
@@ -54,6 +54,9 @@ class Player extends EventEmitter {
       return this.error(view, msg);
     }
 
+    // empty canvas as default
+    if (!rootNode && !value) value = '<canvas></canvas>';
+
     // onprogress
     let cacheRate = 0;
     let progress = 0;
@@ -87,6 +90,7 @@ class Player extends EventEmitter {
       view,
       autoStart: false,
       sharedTicker: false,
+      powerPreference: "high-performance",
     });
 
     // preload
@@ -300,7 +304,7 @@ class Player extends EventEmitter {
         this._burner.resize(width, height);
       }
     } else {
-      this._burner = new Renderer({ width, height });
+      this._burner = new Renderer({ width, height, powerPreference: "high-performance", });
     }
     return this._burner;
   }
@@ -367,18 +371,22 @@ class Player extends EventEmitter {
   async getPreviewImage(node, time, opts={}) {
     if (!this.previewQueue) this.previewQueue = new Queue();
     return this.previewQueue.enqueue(async () => {
-      const { width: w, height: h } = this;
+      const { width, height } = this;
       const vtype = STATIC.VIEW_TYPE_BURN;
-      const burner = this.burnerRenderer(w, h);
+      const burner = this.burnerRenderer(width, height);
       const view = node.getView(vtype);
-      // console.log({burner, vtype, view});
       await node.draw(time, vtype);
-      burner.render(view);
+      // directly render to screen and use burner.view will cause interaction event bug.
+      // use RenderTexture to avoid it
+      const renderTexture = RenderTexture.create({width, height});
+      burner.render(view, {renderTexture});
+      // todo: extract支持直接出图，就不用再转绘一次了
+      const canvas = burner.plugins.extract.canvas(renderTexture);
       // todo: frame of bounds?
       const frame = node.isViewContainer ? 
-        { x: 0, y: 0, w, h } : 
+        { x: 0, y: 0, w: width, h: height } : 
         { x: view.x, y: view.y, w: view.width, h: view.height };
-      return ImageUtils.subImage(burner.view, frame, opts);
+      return ImageUtils.subImage(canvas, frame, opts);
     });
   }
 
@@ -509,6 +517,8 @@ class Player extends EventEmitter {
       src = URL.createObjectURL(new Blob([data]));
     } else if (data instanceof Blob) {
       src = URL.createObjectURL(data);
+    } else if (data.getContext) {
+      src = data.toDataURL("image/jpeg", 0.5);
     } else {
       return;
     }
@@ -552,6 +562,8 @@ class Player extends EventEmitter {
     if (this.app) this.app.stop();
     this.stopAudio();
 
+    if (this.previewQueue) this.previewQueue.destroy();
+    this.previewQueue = null;
     if (this._queue) this._queue.destroy();
     this._queue = null;
     if (this.audioContext) this.audioContext.close();
