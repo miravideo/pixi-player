@@ -9,7 +9,7 @@ import Constraint from './controls/constraint';
 import { color } from './utils/color';
 import Draft from './utils/draft';
 import md5 from "md5";
-const { HISTORY, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX, SAVED } = require('./utils/static');
+const { HISTORY, HOVER, RESIZE, SELECT, KEYDOWN, KEYUP, MAX, SAVED, CHANGED } = require('./utils/static');
 
 const DEFAULT_OPTS = {
   autoSave: false,
@@ -120,7 +120,7 @@ class Editor extends EventEmitter {
   }
 
   onChange(type) {
-    return (evt) => this.emit('changed', {...evt, type});
+    return (evt) => this.emit(CHANGED, {...evt, type});
   }
 
   onLoad() {
