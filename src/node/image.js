@@ -29,6 +29,12 @@ class Image extends Display {
     await this.material.render(absTime - this.absStartTime, type, view);
     return view;
   }
+
+  defaultVal(key) {
+    // for gif loop
+    if (key === 'loop' && this.type === 'image') return true;
+    return super.defaultVal(key);
+  }
 }
 
 Image.extends(ViewNode);
