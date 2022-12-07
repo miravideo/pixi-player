@@ -50,6 +50,9 @@ class Editor extends EventEmitter {
       keydown: this.onKeyDown(),
       keyup: this.onKeyUp(),
       loaded: this.onLoad(),
+      change: this.onChange('change'),
+      undo: this.onChange('undo'),
+      redo: this.onChange('redo'),
     }
     for (const [evt, func] of Object.entries(this.events)) {
       this.player.on(evt, func);
@@ -114,6 +117,10 @@ class Editor extends EventEmitter {
 
   hideLoading() {
     this.player.hideLoading();
+  }
+
+  onChange(type) {
+    return (evt) => this.emit('changed', {...evt, type});
   }
 
   onLoad() {
