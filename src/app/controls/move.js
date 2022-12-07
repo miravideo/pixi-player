@@ -78,7 +78,7 @@ class Move extends BaseControl {
           const [x, y] = this.constructor.KEY_MAP[evt.key];
           this.node.selectMove({x, y}, evt.shiftKey, evt.mctrlKey);
           this.updateCursor();
-        } else if (evt.code === 'Space') {
+        } else if (evt.code === 'Space' && this.inputStatus === 'COMP_END') {
           // todo: 空格打不出来，很奇怪
           this.textView.value = ' ';
           this.input();
