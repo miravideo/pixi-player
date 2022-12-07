@@ -424,9 +424,12 @@ class Player extends EventEmitter {
   async playAudio(start) {
     if (this.volume <= 0) return this.stopAudio();
     const ss = performance.now();
-    const frames = 10;
+    const frames = 20;
     const { numberOfChannels, fps } = this;
     const len = frames / fps;
+    // 留25%的安全距离，避免还在播放的部分被替换
+    // todo: 但得小心，避免处理时长太长不够
+    const delay = (frames * 0.5) / fps;
     if (!this.playingAudioSource) {
       const ab = await this.getAudioBuffer(start, frames * 2);
       const source = this.audioContext.createBufferSource();
@@ -437,12 +440,11 @@ class Player extends EventEmitter {
       this.playingAudioSource = source;
       this.playingAudioEnd = start + (len * 2);
       this.updateLastHalf = false;
-
-    // len - 0.1，留0.1s的安全距离，避免还在播放的部分被替换
-    } else if (this.playingAudioEnd - start < len - 0.1 && !this.audioPlayUpdating) {
+    } else if (this.playingAudioEnd - start < len - delay && !this.audioPlayUpdating) {
       this.audioPlayUpdating = true;
       // 提前更新，不需要阻塞
       this.getAudioBuffer(this.playingAudioEnd, frames).then(ab => {
+        if (!this.playingAudioSource) return; // may pause
         const buffer = this.playingAudioSource.buffer;
         const offset = this.updateLastHalf ? buffer.length * 0.5 : 0;
         for (let c = 0; c < numberOfChannels; c++) {
