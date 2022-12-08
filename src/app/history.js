@@ -119,13 +119,16 @@ export class Record extends EventEmitter {
     await Promise.all(updates);
 
     // 新增/删除/时间改动/zIndex改动，需要重新annotate
-    this.player.rootNode.annotate(this);
+    // this.player.rootNode.annotate(this); // 先用后面的？
 
     // update view after all changes done
     updates = changedNodes.map(async (node) => {
-      await node.updateView(this.senderId);
+      await node.updateView(this.senderId, changedAttrs[node.id]);
     });
     await Promise.all(updates);
+
+    // 可能updateView也会更改时间，重新annotate一下
+    this.player.rootNode.annotate(this);
 
     return true;
   }

@@ -16,21 +16,23 @@ class Mixin extends Display {
   async initMixin(type, mixin) {
     PluginUtil.extends({plugin: mixin, to: this});
     this.mixinType = type;
-    this.id = Utils.genId(type); // re-gen id
+    this.id = this.conf.id || Utils.genId(type); // re-gen id
+    if (this.createNode) await this.initNode();
+  }
+
+  async initNode() {
     if (this.node) {
       this.removeChild(this.node);
       this.node.destroy(); // release old ones
     }
-    if (this.createNode) {
-      let node = await this.createNode();
-      if (!(typeof(node) === 'object' && node.annotate)) {
-        const {node: _node, cachePromise} = Builder.from(node);
-        await cachePromise;
-        node = _node;
-      }
-      this.node = node;
-      this.addChild(node);
+    let node = await this.createNode();
+    if (!(typeof(node) === 'object' && node.annotate)) {
+      const {node: _node, cachePromise} = Builder.from(node);
+      await cachePromise;
+      node = _node;
     }
+    this.node = node;
+    this.addChild(node);
   }
 
   defaultVal(key) {
