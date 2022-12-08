@@ -591,7 +591,8 @@ class Clip extends EventEmitter {
   }
 
   get startTime() {
-    const start = this.time(this.conf.start);
+    let start = this.getRawConf('start', false);
+    start = this.time(start);
     return this.rt(!isNaN(start) ? start : this.time(this.default.startTime));
   }
 
@@ -607,9 +608,11 @@ class Clip extends EventEmitter {
   }
 
   get realEndTime() {
-    const end = this.time(this.conf.end);
+    let duration = this.getRawConf('duration', false);
+    let end = this.getRawConf('end', false);
+    end = this.time(end);
     if (!isNaN(end)) return end;
-    let duration = this.time(this.conf.duration);
+    duration = this.time(duration);
     duration = !isNaN(duration) ? duration : this.time(this.default.duration);
     if (!isNaN(duration)) return this.startTime + duration;
     const defaultEnd = this.time(this.default.endTime);
@@ -618,9 +621,11 @@ class Clip extends EventEmitter {
   }
 
   get flexibleDuration() {
-    return (this.conf.duration && this.conf.duration.toString().includes('%'))
-     || (this.conf.end && this.conf.end.toString().includes('%'))
-     || (!this.conf.duration && !this.conf.end);
+    const duration = this.getRawConf('duration', false);
+    const end = this.getRawConf('end', false);
+    return (duration && duration.toString().includes('%'))
+     || (end && end.toString().includes('%'))
+     || (!duration && !end);
   }
 
   get fps() {
@@ -644,7 +649,9 @@ class Clip extends EventEmitter {
     }
     if (typeof(time) === 'string') {
       time = time.replaceAll(' ', '');
-      if (time.includes('%+') && time.split('%+').length === 2) {
+      if (time.toLowerCase() === 'contain' && this.material?.length) {
+        return this.material.length;
+      } else if (time.includes('%+') && time.split('%+').length === 2) {
         const [ head, tail ] = time.split('%+');
         return Number(head) * 0.01 * parentDuration + Number(tail);
       } else if (time.includes('%-') && time.split('%-').length === 2) {
