@@ -235,7 +235,7 @@ class Editor extends EventEmitter {
 
   canCropFrame(node) {
     node = node || this.selected[0];
-    if (!node || (node.getConf('object-fit') !== 'cover')) return false;
+    if (!node || (node.getConf('object-fit', false) !== 'cover')) return false;
     return true;
   }
 
