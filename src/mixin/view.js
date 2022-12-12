@@ -20,7 +20,7 @@ const ViewNode = {
   },
   _vn_updateViewAttr(view) {
     if (!view || !view.attr) return;
-    const keys = this.viewAttrKeys || ['x', 'y', 'width', 'height', 'anchor', 'scale', 'alpha', 'rotation'];
+    const keys = this.viewAttrKeys || ['x', 'y', 'width', 'height', 'anchor', 'scale', 'alpha', 'rotation', 'flipX', 'flipY'];
     const attrs = {};
     for (const key of keys) {
       let val = this.getConf(key);

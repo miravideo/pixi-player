@@ -11,7 +11,7 @@ import AnimationNode from '../mixin/animation';
 import { Rectangle, SCALE_MODES } from 'pixi.js'
 
 const DEFAULT_CONF = { active: true,
-  x: '50vw', y: '50vh', anchor: [0.5, 0.5],
+  x: '50vw', y: '50vh', anchor: [0.5, 0.5], flipX: false, flipY: false,
   scale: 1, rotation: 0, alpha: 1, speed: 1, volume: 1,
   enableAudioAnalyser: false, 'object-fit': 'cover',
 };
@@ -109,6 +109,9 @@ DisplayObject.mixin({
             this.anchor.y = Array.isArray(val) ? val[1] : (Number(val) || 0.5);
           }
           break;
+        case "flipX":
+        case "flipY":
+          scaleChanged = true;
         default:
           this[key] = val;
       }
@@ -116,13 +119,13 @@ DisplayObject.mixin({
     if (this.scale) {
       // 如果更改了这些值，需要重置initScale
       if (attrs['absScale'] || attrs['width'] || attrs['height']) {
-        this.initScale = { x: this.scale.x, y: this.scale.y };
+        this.initScale = { x: Math.abs(this.scale.x), y: Math.abs(this.scale.y) };
         scaleChanged = true;
       }
       if (scaleChanged) {
         if (!this.initScale) this.initScale = { x: 1, y: 1 };
-        this.scale.x = this.initScale.x * this.relativeScale.x;
-        this.scale.y = this.initScale.y * this.relativeScale.y;
+        this.scale.x = this.initScale.x * this.relativeScale.x * (this.flipX ? -1 : 1);
+        this.scale.y = this.initScale.y * this.relativeScale.y * (this.flipY ? -1 : 1);
       }
     }
   }
