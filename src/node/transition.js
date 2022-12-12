@@ -105,7 +105,6 @@ class Transition extends Clip {
     const view = await super.draw(absTime, type);
     if (!view || !view.filters?.length) return;
     const filter = view.filters[0];
-    const fit = this.getConf('fit');
     const bounds = { 'prev': null, 'next': null };
     const keys = ['prev', 'next'];
 
@@ -121,7 +120,16 @@ class Transition extends Clip {
       const sv = siblingNode.getView(absTime, type);
       if (!sv) continue;
       this.getRenderer(type).render(sv, {renderTexture: filter[k].texture});
-      if (fit) bounds[k] = sv.getBounds();
+      bounds[k] = sv.getBounds();
+    }
+
+    let fit = this.getConf('fit', false);
+    const { width, height } = this.root();
+    // 如果没有设置fit, 且前后两个画幅相同，且都小于canvas画面，就自动fit=true
+    if (fit === undefined && bounds['prev'] && bounds['next']
+        && bounds['prev'].toString() === bounds['next'].toString()
+        && (bounds['prev'].width < width || bounds['prev'].height < height)) {
+      fit = true;
     }
 
     if (fit) {
@@ -130,7 +138,6 @@ class Transition extends Clip {
       const rect = bounds['prev'] || bounds['next'];
       if (bounds['prev'] && bounds['next']) rect.enlarge(bounds['next']);
 
-      const { width, height } = this.root();
       const attrs = {};
       attrs.width = rect ? rect.width : width;
       attrs.height = rect ? rect.height : height;
