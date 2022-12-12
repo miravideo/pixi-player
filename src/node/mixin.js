@@ -33,6 +33,7 @@ class Mixin extends Display {
     }
     this.node = node;
     this.addChild(node);
+    node.initzIndex({ zIndex: 1 + this.zIndex - this.basezIndex });
   }
 
   defaultVal(key) {

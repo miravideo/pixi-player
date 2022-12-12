@@ -59,18 +59,6 @@ class Canvas extends Container {
     }
   }
 
-  initzIndex() {
-    let zIndex = 0;
-    const walkzIndex = (node) => {
-      node.children.map(x => {
-        x.zIndex = x.basezIndex + (zIndex++);
-        // if (!x.conf.zIndex) x.conf.zIndex = x.zIndex;
-        walkzIndex(x);
-      });
-    }
-    walkzIndex(this);
-  }
-
   getViewParent(time, type) {
     return null;
   }

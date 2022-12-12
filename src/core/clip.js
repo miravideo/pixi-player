@@ -858,6 +858,11 @@ class Clip extends EventEmitter {
     return await this.player.getPreviewImage(this, time, opts);
   }
 
+  initzIndex(ref={zIndex:1}) {
+    this.zIndex = this.basezIndex + (ref.zIndex++);
+    this.children.map(x => x.initzIndex(ref));
+  }
+
   destroy() {
     this.removeAllListeners();
     this.destroied = true;
