@@ -32,12 +32,12 @@ class Fit extends Move {
       ctls.regroup = { box: box.handleBox, styleClass: 'regroup' };
     }
     if (!['video', 'image'].includes(this.node.type) || this.node.asMask) {
-      // ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
-      // ctls.flipY = { box: box.handleBox, styleClass: 'flipY' };
+      ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
+      ctls.flipY = { box: box.handleBox, styleClass: 'flipY' };
     } else {
       ctls.fit = { box: box.handleBox, styleClass: 'fit' };
       ctls.crop = { box: box.handleBox, styleClass: 'crop' };
-      // ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
+      ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
     }
     return ctls;
   }
@@ -73,11 +73,9 @@ class Fit extends Move {
     } else if (event.target.hasClass('crop')) {
       this.editor.setCropMode(this.node, true);
     } else if (event.target.hasClass('flipX')) {
-      Fit.apply(this.node, { to: { flipX: !this.node.conf.flipX } }, 'resize');
-      this.node.emit(CHANGING, {action: OP_END});
+      await this.editor.update([this.node], { flipX: !this.node.conf.flipX }, this.box.uuid);
     } else if (event.target.hasClass('flipY')) {
-      Fit.apply(this.node, { to: { flipY: !this.node.conf.flipY } }, 'resize');
-      this.node.emit(CHANGING, {action: OP_END});
+      await this.editor.update([this.node], { flipY: !this.node.conf.flipY }, this.box.uuid);
     } else if (event.target.hasClass('group')) {
       const lock = !this.node.groupLocked;
       await this.node.lock(lock);
