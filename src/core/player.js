@@ -432,6 +432,7 @@ class Player extends EventEmitter {
     const delay = (frames * 0.5) / fps;
     if (!this.playingAudioSource) {
       const ab = await this.getAudioBuffer(start, frames * 2);
+      if (!this.playing) return this.stopAudio(); // may paused
       const source = this.audioContext.createBufferSource();
       source.buffer = ab;
       source.loop = true;
@@ -444,7 +445,7 @@ class Player extends EventEmitter {
       this.audioPlayUpdating = true;
       // 提前更新，不需要阻塞
       this.getAudioBuffer(this.playingAudioEnd, frames).then(ab => {
-        if (!this.playingAudioSource) return; // may pause
+        if (!this.playingAudioSource || !this.playing) return this.stopAudio(); // may paused
         const buffer = this.playingAudioSource.buffer;
         const offset = this.updateLastHalf ? buffer.length * 0.5 : 0;
         for (let c = 0; c < numberOfChannels; c++) {
