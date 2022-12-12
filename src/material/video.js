@@ -78,6 +78,8 @@ class VideoMaterial extends ImageMaterial {
 
     const ksize = 3;
     const frame = this.frames[i];
+    // console.log('getFrame', {matTime, retried, i}, this.frames.length, frame?.t);
+
     // 可以接受1-2帧的误差，因为有些视频会缺帧
     if (frame && Math.abs(frame.t - matTime) < this.ticker * ksize) {
       if (i > ksize) {

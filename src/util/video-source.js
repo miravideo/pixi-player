@@ -46,8 +46,10 @@ class VideoSource  {
     return this.queue.enqueue(async () => {
       return new Promise((resolve, reject) => {
         const reqId = Utils.genUuid();
+        // console.log('== extract', {type, start, end});
         this.worker.addEventListener('message', e => {
           // console.error('rrrr', reqId == e.data.reqId);
+          // console.log('== extract res', e);
           if (e.data.method === 'extract') resolve(e.data.frames);
         }, { once: true });
         this.worker.postMessage({ method: 'extract', start, end, type, reqId });

@@ -166,7 +166,7 @@ class MP4Decoder {
     this.currentTime = t;
 
     // stop
-    if (t >= Math.min(end, this.meta.lastFrame)) {
+    if (t + d >= Math.min(end, this.meta.audioDuration)) {
       this.file.stop();
       this.file.flush();
       this.extractFinish();
@@ -188,7 +188,7 @@ class MP4Decoder {
     frame.close();
     this.currentTime = t;
 
-    // console.log('frame', t, end, this.videoDecoder.decodeQueueSize, this.videoDecoder.state);
+    // console.log('frame', {t, d, start, end, max: this.meta.lastFrame}, this.videoDecoder.decodeQueueSize, this.videoDecoder.state);
 
     // stop
     if (t >= Math.min(end, this.meta.lastFrame)) {
@@ -316,8 +316,11 @@ class MP4Decoder {
     // });
 
     const { end } = this.extractingRequest;
+    const maxTime = type === 'video' ? this.meta.lastFrame : this.meta.audioDuration;
+    // console.log('samples', {type, lastTime, end, maxTime}, lastTime >= Math.min(end + 0.5, maxTime));
+
     // end + 0.5s 是为了避免后面的B帧先满足了时间，flush之后没有I帧，出不来
-    if (lastTime >= Math.min(end + 0.5, this.meta.lastFrame)) {
+    if (lastTime >= Math.min(end + 0.5, maxTime)) {
       this.file.stop();
       // 调用flush，避免一些帧在queue里出不来
       decoder.flush().catch(e => {
@@ -366,9 +369,11 @@ class MP4Decoder {
     const { width, height } = vtrack.video;
     const { sampleRate, numberOfChannels, sampleSize } = this.aconfig;
     const frames = vtrack.nb_samples;
-    const duration = info.duration ? (info.duration / info.timescale) : (vtrack.duration / vtrack.timescale);
+    const videoDuration = vtrack.duration / vtrack.timescale;
+    const audioDuration = atrack.duration / atrack.timescale;
+    const duration = info.duration ? (info.duration / info.timescale) : videoDuration;
     const fps = (frames / duration).toFixed(6);
-    this.meta = { width, height, frames, duration, sampleRate, numberOfChannels, sampleSize, fps };
+    this.meta = { width, height, frames, duration, videoDuration, audioDuration, sampleRate, numberOfChannels, sampleSize, fps };
     this.frames = 0;
 
     this.prepareCanvas();
