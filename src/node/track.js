@@ -40,13 +40,14 @@ class Track extends Clip {
     this.lastChildEndTime = this.lastChild ? this.lastChild.endTime : 0;
   }
 
-  get absStartTime() {
-    return 0;
-  }
+  // 允许track.parent自带开始时间
+  // get absStartTime() {
+  //   return 0;
+  // }
 
-  get absEndTime() {
-    return this.endTime;
-  }
+  // get absEndTime() {
+  //   return this.endTime;
+  // }
 
   get startTime() {
     return 0;

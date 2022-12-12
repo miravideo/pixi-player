@@ -206,6 +206,8 @@ class Clip extends EventEmitter {
    * avoid duplicate calls of draw in a single frame
    */
   async unidraw(absTime, type) {
+    const loop = this.parents.reverse().find(x => x.type === 'loop');
+    if (loop) absTime = loop.relativeTime(absTime);
     const key = `${absTime}@${type}`;
     if (!this._drawing[key]) {
       this._drawing[key] = new Promise(async (resolve) => {
@@ -588,7 +590,7 @@ class Clip extends EventEmitter {
 
   get default() {
     return {
-      startTime: (this.parent?.type === 'spine' ? this.prevSibling?.endTime : 0) || 0,
+      startTime: (this.parent?.isTrack ? this.prevSibling?.endTime : 0) || 0,
       endTime: '100%',
     }
   }
@@ -758,6 +760,8 @@ class Clip extends EventEmitter {
   }
 
   async getAudioFrame(absTime, frameSize) {
+    const loop = this.parents.reverse().find(x => x.type === 'loop');
+    if (loop) absTime = loop.relativeTime(absTime);
     if (!this.material || !this.onShow(absTime) || !this.hasAudio) return {};
     const volume = this.volume(absTime);
     if (volume <= 0) return {};

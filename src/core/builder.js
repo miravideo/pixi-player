@@ -15,6 +15,7 @@ import Mixin from "../node/mixin";
 import Audio from "../node/audio";
 import Graph from "../node/graph";
 import Div from "../node/div";
+import Loop from "../node/loop";
 import Text from "../node/text";
 
 const TYPES = {
@@ -28,6 +29,7 @@ const TYPES = {
   track: Track,
   container: Container,
   div: Div,
+  loop: Loop,
   scene: Scene,
   cover: Cover,
   audio: Audio,
