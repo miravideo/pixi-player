@@ -42,6 +42,7 @@ class Editor extends EventEmitter {
       burning: this.onBlur(),
       playing: this.onBlur(),
       timeupdate: this.onTimeUpdate(),
+      loadedmetadata: this.onReload(),
       resize: this.onResize(),
       click: this.onBlur(),
       hover: this.onHover(),
@@ -127,8 +128,24 @@ class Editor extends EventEmitter {
     return (evt) => this.initContainer();
   }
 
+  onReload() {
+    return (evt) => {
+      if (this.rootNode.previewMode) {
+        const target = this.rootNode.allNodes.find(x => x.getConf('cropable', false));
+        if (target) this.setCropMode(target, true);
+        this.previewMode = true;
+      } else {
+        this.previewMode = false;
+        this.emit(SELECT);
+      }
+    }
+  }
+
   onTimeUpdate() {
-    return (evt) => this.emit(RESIZE); // update
+    return (evt) => {
+      this.emit(RESIZE); // fit select box;
+      this.emit('timeupdate');
+    }
   }
 
   onBlur() {
@@ -170,6 +187,7 @@ class Editor extends EventEmitter {
     return (evt) => {
       this.emit(KEYDOWN, evt);
       if (evt.key === 'Escape') {
+        if (this.previewMode) this.enablePreviewMode();
         this.emit(SELECT); // unselect all
       } else if (evt.key.toLowerCase() === 'z' && evt.mctrlKey) {
         evt.shiftKey ? this.redo() : this.undo();
@@ -325,6 +343,11 @@ class Editor extends EventEmitter {
     }
     this.player.load(opts);
     return this.draft = item;
+  }
+
+  enablePreviewMode(node) {
+    this.controls.crop.node = null;
+    this.core.preview(node);
   }
 
   destroy() {

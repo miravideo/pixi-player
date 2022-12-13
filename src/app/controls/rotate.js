@@ -18,7 +18,7 @@ class Rotate extends Move {
   }
 
   controls(box) {
-    if (this.node.conf.rotateDisable || this.node.cropMode) return {};
+    if (this.node.cropMode || this.node.getConf('rotatable', false) === false) return {};
     return { rotate: { box: box.handleBox, styleClass: 'handle' } };
   }
 

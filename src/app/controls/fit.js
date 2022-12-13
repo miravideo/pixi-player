@@ -18,6 +18,7 @@ class Fit extends Move {
     if (this._controls.crop) this._controls.crop.show(show && this.editor.canCropFrame(this.node));
     if (this._controls.flipX) this._controls.flipX.show(show);
     if (this._controls.flipY) this._controls.flipY.show(show);
+    if (this._controls.edit) this._controls.edit.show(show);
     if (this._controls.group) this._controls.group.show(show).toggleClass('locked', !!this.node.groupLocked);
     if (this._controls.regroup) this._controls.regroup.show(show && this.node.conf.srcGroupId);
     return this;
@@ -31,13 +32,18 @@ class Fit extends Move {
     } else if (this.node.conf.srcGroupId) {
       ctls.regroup = { box: box.handleBox, styleClass: 'regroup' };
     }
-    if (!['video', 'image'].includes(this.node.type) || this.node.asMask) {
+    if (this.node.getConf('fitable', false)) {
+      ctls.fit = { box: box.handleBox, styleClass: 'fit' };
+    }
+    if (this.node.getConf('cropable', false)) {
+      ctls.crop = { box: box.handleBox, styleClass: 'crop' };
+    }
+    // if (this.node.getConf('previewable', false)) {
+    //   ctls.edit = { box: box.handleBox, styleClass: 'edit' };
+    // }
+    if (this.node.getConf('flipable', false)) {
       ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
       ctls.flipY = { box: box.handleBox, styleClass: 'flipY' };
-    } else {
-      ctls.fit = { box: box.handleBox, styleClass: 'fit' };
-      ctls.crop = { box: box.handleBox, styleClass: 'crop' };
-      ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
     }
     return ctls;
   }
@@ -71,7 +77,10 @@ class Fit extends Move {
       await this.editor.update([this.node], attrs, this.box.uuid);
       this.box.resize();
     } else if (event.target.hasClass('crop')) {
-      this.editor.setCropMode(this.node, true);
+      this.editor.enablePreviewMode(this.node);
+      // this.editor.setCropMode(this.node, true);
+    } else if (event.target.hasClass('edit')) {
+      this.editor.setPreviewMode(this.node);
     } else if (event.target.hasClass('flipX')) {
       await this.editor.update([this.node], { flipX: !this.node.conf.flipX }, this.box.uuid);
     } else if (event.target.hasClass('flipY')) {

@@ -10,21 +10,24 @@ class MiraEditorCrop extends MiraEditorMove {
 
   setOpts(opts) {
     super.setOpts(opts);
+    this.node = this.parentNode.node;
     if (opts.canvas) {
       this.image = document.createElement("img");
       this.image.setAttribute('mira-editor-el', '');
-      this.image.src = opts.canvas.toDataURL();
       this.canvas = opts.canvas;
+      this.updateImage();
       this.appendChild(this.image);
     }
     // init fit size
     this.origin = opts.styleClass === 'origin';
-    this.node = this.parentNode.node;
     this.fit();
     return this;
   }
 
   updateImage() {
+    const flipX = this.node.getConf('flipX', false);
+    const flipY = this.node.getConf('flipY', false);
+    this.image.style.transform = `scaleX(${flipX ? -1 : 1}) scaleY(${flipY ? -1 : 1})`;
     this.image.src = this.canvas.toDataURL();
   }
 
@@ -78,16 +81,20 @@ class MiraEditorCrop extends MiraEditorMove {
   fitFrame() {
     const [ frame, mw, mh, scale ] = this.metrics();
     const [ w, h ] = [scale * frame.w + 4, scale * frame.h + 4];
-    const x = - ((mw - frame.w) * 0.5 - frame.x) * scale;
-    const y = - ((mh - frame.h) * 0.5 - frame.y) * scale;
+    const flipX = this.node.getConf('flipX', false);
+    const flipY = this.node.getConf('flipY', false);
+    const x = - (flipX ? -1 : 1) * ((mw - frame.w) * 0.5 - frame.x) * scale;
+    const y = - (flipY ? -1 : 1) * ((mh - frame.h) * 0.5 - frame.y) * scale;
     this.setFrame({ x, y, w, h });
   }
 
   fitOrigin() {
     const [ frame, mw, mh, scale ] = this.metrics();
     const [ w, h ] = [scale * mw, scale * mh];
-    const x = ((mw - frame.w) * 0.5 - frame.x) * scale;
-    const y = ((mh - frame.h) * 0.5 - frame.y) * scale;
+    const flipX = this.node.getConf('flipX', false);
+    const flipY = this.node.getConf('flipY', false);
+    const x = (flipX ? -1 : 1) * ((mw - frame.w) * 0.5 - frame.x) * scale;
+    const y = (flipY ? -1 : 1) * ((mh - frame.h) * 0.5 - frame.y) * scale;
     this.setFrame({ x, y, w, h });
   }
 

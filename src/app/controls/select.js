@@ -16,11 +16,6 @@ class Select extends BaseControl {
     this.selectedBox = null;
   }
 
-  get cropMode() {
-    // 画幅不动的crop
-    return this.editor.cropMode === 'frame';
-  }
-
   events() {
     return {
       [KEYDOWN]: this.onKeyDown(), [KEYUP]: this.onKeyUp(),
@@ -162,7 +157,7 @@ class Select extends BaseControl {
 
   hideSelect() {
     if (this.selected?.cropMode === 'frame') {
-      if (this.constructor.type === 'select' && !this.cropMode) {
+      if (this.constructor.type === 'select' && !this.editor.previewMode) {
         // 如果是frame的裁剪模式，就退出
         this.selected.cropMode = false;
       } else {

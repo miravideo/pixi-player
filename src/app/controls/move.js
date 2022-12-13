@@ -112,7 +112,7 @@ class Move extends BaseControl {
   }
 
   controls(box) {
-    if (this.node.cropMode) return {};
+    if (this.node.cropMode || this.node.getConf('movable', false) === false) return {};
     return {
       move: { box, styleClass: 'box' },
       moveHandle: { box: box.handleBox, styleClass: 'handle' },

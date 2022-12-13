@@ -29,7 +29,7 @@ class Crop extends Move {
   }
 
   fit() {
-    if (!this._controls.origin || !this._controls.cropped) return;
+    if (!this._controls.origin || !this._controls.cropped || !this.node) return;
     this._controls.origin.fit();
     this._controls.cropped.fit();
     this.updateShow(this.box);
@@ -40,6 +40,10 @@ class Crop extends Move {
     // always show
     // Object.values(this._controls).map(ctl => ctl.show(true));
     return this;
+  }
+
+  get fullCropMode() {
+    return !!this.node.getConf('fullCrop', false);
   }
 
   controls() {
@@ -63,7 +67,7 @@ class Crop extends Move {
       bottomLeft:  { box: 'cropped', pos: BOTTOM | LEFT,  styleClass: 'dot' },
     };
     // return { ...origCtrls, ...cropCtrls };
-    return this.selector.cropMode ? 
+    return this.fullCropMode ? 
       { origin: origCtrls.origin, ...cropCtrls} : 
       { ...origCtrls, ...cropCtrls };
   }
@@ -116,7 +120,7 @@ class Crop extends Move {
     const cp = this._controls.cropped.position;
     const os = this._controls.origin.size;
 
-    if (this.selector.cropMode && isMove) {
+    if (this.fullCropMode && isMove) {
       // 移动内框时，实际上也要移动position, 公式I
       frame.x = (mw * (cp.x + frame.x) / (os.width + frame.w))  - (mw * cp.x / os.width);
       frame.y = (mh * (cp.y + frame.y) / (os.height + frame.h)) - (mh * cp.y / os.height);
@@ -162,7 +166,7 @@ class Crop extends Move {
     };
 
     let attrs = { pframe };
-    if (this.selector.cropMode && isMove) {
+    if (this.fullCropMode && isMove) {
       // 上面公式I的逆运算，其实 x = delta.position.x 只是被约束之后，只能反过来计算了
       const x = (frame.x + (mw * cp.x / os.width)) * os.width / mw - cp.x;
       const y = (frame.y + (mh * cp.y / os.height)) * os.height / mh - cp.y;

@@ -93,37 +93,7 @@ class Player extends EventEmitter {
       powerPreference: "high-performance",
     });
 
-    // preload
-    await this.rootNode.preload();
-    // todo: preload有些不能并行，比如多个video是同一个URL的，会重复下载
-    // 但可以写复杂一些的queue去并行？
-    const allNodes = this.rootNode.allNodes;
-    const r = (1 - cacheRate) / allNodes.length;
-    let i = 0;
-    for (const node of allNodes) {
-      i++;
-      const baseProgress = cacheRate + r * (i - 1);
-      // console.log('preloading', node.id);
-      await node.preload((p) => {
-        onprogress && onprogress(baseProgress + r * p);
-      });
-      onprogress && onprogress(cacheRate + r * i);
-      // console.log('preloaded', node.id);
-    }
-
-    // annotate
-    this.rootNode.allNodes.map(node => node.annotate());
-    // todo: allNodes需要重新计算，因为可能还有变化
-    this.rootNode.annotate();
-    this.rootNode.allNodes.map(node => {
-      this.log(
-        `${node.id.padEnd(20, ' ')}: ` +
-        `show:[${node.absStartTime.toFixed(2).padStart(6, ' ')}, ${node.absEndTime.toFixed(2).padStart(6, ' ')})  ` +
-        (!isNaN(node.absDrawStartTime) ? `draw:[${node.absDrawStartTime.toFixed(2).padStart(6, ' ')}, ${node.absDrawEndTime.toFixed(2).padStart(6, ' ')})  ` : '') +
-        `duration:${node.duration.toFixed(0).padStart(6, ' ')}  ` +
-        `zIndex:${(isNaN(node.zIndex) ? -1 : node.zIndex).toFixed(0).padStart(8, ' ')}`
-      );
-    });
+    await this.preload(cacheRate);
 
     // add view
     const rootView = this.rootNode.getView(0, STATIC.VIEW_TYPE_SEEK);
@@ -178,6 +148,109 @@ class Player extends EventEmitter {
     this.emit('loadedmetadata', {
       duration: this.duration, width: this.width, height: this.height
     });
+  }
+
+  async preload(cacheRate=0) {
+    // preload
+    await this.rootNode.preload();
+    // todo: preload有些不能并行，比如多个video是同一个URL的，会重复下载
+    // 但可以写复杂一些的queue去并行？
+    const allNodes = this.rootNode.allNodes;
+    const r = (1 - cacheRate) / allNodes.length;
+    let i = 0;
+    for (const node of allNodes) {
+      i++;
+      const baseProgress = cacheRate + r * (i - 1);
+      // console.log('preloading', node.id);
+      await node.preload((p) => {
+        onprogress && onprogress(baseProgress + r * p);
+      });
+      onprogress && onprogress(cacheRate + r * i);
+      // console.log('preloaded', node.id);
+    }
+
+    // annotate
+    this.rootNode.allNodes.map(node => node.annotate());
+    // todo: allNodes需要重新计算，因为可能还有变化
+    this.rootNode.annotate();
+    this.rootNode.allNodes.map(node => {
+      this.log(
+        `${node.id.padEnd(20, ' ')}: ` +
+        `show:[${node.absStartTime.toFixed(2).padStart(6, ' ')}, ${node.absEndTime.toFixed(2).padStart(6, ' ')})  ` +
+        (!isNaN(node.absDrawStartTime) ? `draw:[${node.absDrawStartTime.toFixed(2).padStart(6, ' ')}, ${node.absDrawEndTime.toFixed(2).padStart(6, ' ')})  ` : '') +
+        `duration:${node.duration.toFixed(0).padStart(6, ' ')}  ` +
+        `zIndex:${(isNaN(node.zIndex) ? -1 : node.zIndex).toFixed(0).padStart(8, ' ')}`
+      );
+    });
+  }
+
+  async preview(node) {
+    if (this.locked || !this.app) return;
+    if (this.playing) this.pause();
+
+    if (!node) {
+      if (!this._rootNode || this._rootNode == this.rootNode) return;
+      this.rootNode.player = null;
+      this.rootNode.destroy();
+      this.rootNode = this._rootNode;
+      this._rootNode = null;
+      this._timer = 0; // reset timer
+    } else {
+      this._rootNode = this.rootNode;
+      let conf = null;
+      if (['image', 'video'].includes(node.type)) {
+        let { width, height } = node.material.info;
+        width *= 2, height *= 2; // todo: for retina resolution
+        const duration = node.type === 'video' ? 'contain' : 0.1;
+        const { flipX, flipY } = node.conf;
+        const nodeConf = {
+          type: node.type, src: node.material.src, duration, width, height,
+          // flipX, flipY, 
+          cropable: true, fullCrop: true, 
+          flipable: false, movable: false, rotatable: false, fitable: false, resizable: false, 
+        };
+
+        const pframe = node.pframe;
+        if (pframe) {
+          let w = width * pframe.w, h = height * pframe.h;
+          let x = width * pframe.x + 0.5 * w, y = height * pframe.y + 0.5 * h;
+          Object.assign(nodeConf, {
+            pframe, x, y, width: w, height: h
+          });
+        }
+        conf = { type: 'canvas', width, height, children: [nodeConf] };
+      } else {
+        return;
+      }
+      const { node: previewRoot, cachePromise } = Builder.from(conf);
+      await cachePromise;
+      previewRoot.player = this; // bind player
+      this.rootNode = previewRoot;
+      await this.preload();
+      // todo: crop timeline
+      this._timer = node.material.getStartOffset(); // reset timer
+    }
+
+    if (!this.rootNode?.width || !this.rootNode?.height) {
+      throw new Error('Resize to null!');
+    }
+
+    this.app.stage.removeChildren();
+    this.app.stage.addChild(this.rootNode.getView());
+    this.app.renderer.resize(this.rootNode.width, this.rootNode.height);
+
+    await this.render(); // 重新render
+    if (this._rootNode) this.rootNode.previewMode = true;
+    this.emit('loadedmetadata', {
+      duration: this.rootNode.duration, 
+      width: this.rootNode.width, 
+      height: this.rootNode.width,
+    });
+    this.emit('timeupdate', {
+      currentTime: 0, 
+      duration: this.rootNode.duration
+    });
+    this.emit('resize');
   }
 
   async resize(width, height) {
@@ -278,11 +351,11 @@ class Player extends EventEmitter {
   }
 
   get width() {
-    return this.app?.view.width || this._viewWidth;
+    return this.rootNode?.width || this._viewWidth;
   }
 
   get height() {
-    return this.app?.view.height || this._viewHeight;
+    return this.rootNode?.height || this._viewHeight;
   }
 
   get queue() {

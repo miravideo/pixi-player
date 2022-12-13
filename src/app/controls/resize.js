@@ -23,7 +23,7 @@ class Resize extends Move {
   }
 
   controls() {
-    if (this.node.conf.resizeDisable || this.node.cropMode) return {};
+    if (this.node.cropMode || this.node.getConf('resizable', false) === false) return {};
     const SCALE_CTLS = {
       topLeft:     { pos: TOP | LEFT,     styleClass: 'dot' },
       topRight:    { pos: TOP | RIGHT,    styleClass: 'dot' },

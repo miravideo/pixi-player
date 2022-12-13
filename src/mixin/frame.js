@@ -75,6 +75,23 @@ const FrameNode = {
     }
   },
 
+  get pframe() {
+    if (!this.material) return;
+    const pframe = this.getConf('pframe');
+    if (pframe) {
+      return { ...pframe };
+    } else {
+      const frame = this.getConf('frame');
+      if (frame) {
+        const [ mw, mh ] = [this.material.width, this.material.height];
+        const [ x, y, w, h ] = [
+          frame.x / mw, frame.y / mh,
+          frame.w / mw, frame.h / mh ];
+        return { x, y, w, h };
+      }
+    }
+  },
+
   getObjectPosition() {
     let position = this.getConf('object-position');
     // position默认跟anchor一样

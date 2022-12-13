@@ -4,6 +4,10 @@ import ViewNode from "../mixin/view";
 import FrameNode from "../mixin/frame";
 import ImageMaterial from "../material/image";
 
+const EDITABLE_CONF = {
+  fitable: true, cropable: true, flipable: false,
+};
+
 class Image extends Display {
   constructor(conf) {
     super({type: 'image', ...conf});
@@ -33,6 +37,7 @@ class Image extends Display {
   defaultVal(key) {
     // for gif loop
     if (key === 'loop' && this.type === 'image') return true;
+    if (EDITABLE_CONF[key] !== undefined) return this.asMask ? false : EDITABLE_CONF[key];
     return super.defaultVal(key);
   }
 }

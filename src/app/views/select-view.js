@@ -35,7 +35,10 @@ class MiraEditorBox extends MiraEditorBase {
 
   setAnchor(opts) {
     const { x, y } = opts || this.nodeView.anchor;
-    this.anchor = { x, y };
+    // todo: flip之后，如果anchor不在中心，move会有bug！！
+    const flipX = this.node.getConf('flipX', false);
+    const flipY = this.node.getConf('flipY', false);
+    this.anchor = { x: (flipX ? 1 - x : x), y: (flipY ? 1 - y : y) };
     return this.setStyle({ 'transform-origin': `${round(x*100, 1)}% ${round(y*100, 1)}%` });
   }
 
