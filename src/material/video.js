@@ -14,7 +14,6 @@ class VideoMaterial extends ImageMaterial {
     this.frames = [];
     this.muted = true;
     this.playing = false;
-    this.perpared = false;
     this.queue = new Queue();
 
     let src = this.src;
@@ -48,40 +47,53 @@ class VideoMaterial extends ImageMaterial {
   }
 
   async prepare(nodeTime, type) {
-    if (this.perpared) return;
-    this.perpared = true;
+    if (this.perparing) return;
+    this.perparing = true;
+
     const { time, loops, overflow } = this.matTime(nodeTime);
-    const vp = this.extract(time);
+    const { frame: hasVideoCache } = this.getCachedFrame(time, 3);
+    const vp = hasVideoCache ? null : this.extract(time);
 
     // prepare audio cache
     const { audioSampleRate, fps } = this.player;
-    const ap = this.getAudioFrame(nodeTime, Math.ceil(audioSampleRate / fps));
+    const startIndex = this.audioCache && this.audioCache.start ?
+      Math.round((time - this.audioCache.start) * audioSampleRate) : -1;
+    const frameSize = Math.ceil(audioSampleRate / fps);
+    const hasAudioCache = startIndex >= 0 && startIndex + frameSize <= this.audioCache.length;
+    const ap = hasAudioCache ? null : this.getAudioFrame(nodeTime, frameSize);
 
+    // if (!hasAudioCache || !hasVideoCache) console.log('prepare', this.node.id, nodeTime);
     await Promise.all([vp, ap]);
+    this.perparing = false;
   }
 
   velease(type) { }
 
-  pause() {
-    this.perpared = false;
-  }
+  pause() { }
 
-  async getFrame(matTime, retried=0) {
-    matTime = Math.max(0, Math.min(matTime, this.info.lastFrame));
-    let i = 0;
+  getCachedFrame(matTime, ksize) {
     // 半帧以内，就四舍五入了
     const mtime = matTime - (this.ticker / 2);
+    let i = 0;
     for (; i < this.frames.length; i++) {
       const frame = this.frames[i];
       if (frame.t > mtime) break;
     }
 
-    const ksize = 3;
     const frame = this.frames[i];
+    // 可以接受1-2帧的误差，因为有些视频会缺帧
+    return frame && Math.abs(frame.t - matTime) < this.ticker * ksize ? {frame, i} : {};
+  }
+
+  async getFrame(matTime, retried=0) {
+    matTime = Math.max(0, Math.min(matTime, this.info.lastFrame));
+
+    const ksize = 3;
+    const {frame, i} = this.getCachedFrame(matTime, ksize);
     // console.log('getFrame', {matTime, retried, i}, this.frames.length, frame?.t);
 
     // 可以接受1-2帧的误差，因为有些视频会缺帧
-    if (frame && Math.abs(frame.t - matTime) < this.ticker * ksize) {
+    if (frame) {
       if (i > ksize) {
         // 把过掉K帧以上的回收了
         this.frames.splice(0, i - ksize).map(f => this.closeFrame(f, 'rollover'));
@@ -126,10 +138,11 @@ class VideoMaterial extends ImageMaterial {
     if (matTime > maxTime) return;
     this.extracting = true;
     const ss = performance.now();
-    // console.log('!!video cache start', this.node.id, matTime);
+    // console.log('!!video cache start', this.node.id, matTime, this.player.currentTime);
     const duration = CACHE_FRAMES / this.player.fps;
     const frames = await this.videoSource.extract('video', matTime, matTime + duration); // todo 处理loop的情况
     if (!frames) return;
+    // todo: loop触发prepare可能在后面还没播放完的时候就请求了一个前面的时间？
     let append = false;
     for (let i in this.frames) {
       if (this.frames[i].t >= frames[0].t) {

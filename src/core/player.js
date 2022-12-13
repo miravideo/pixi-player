@@ -134,15 +134,11 @@ class Player extends EventEmitter {
       if (this.queue.length > 0) return; // 跳一帧
       this.queue.enqueue(async () => {
         const { currentTime, duration, fps } = this;
-        const tick = 1 / fps;
-        this._timer += this.audioContext.currentTime - this.lastTime;
-        this.lastTime = this.audioContext.currentTime;
-
         if (currentTime < duration) {
           // this.pptimer = this.pptimer || [];
           const _ss = performance.now();
           await this.rootNode.draw(currentTime, STATIC.VIEW_TYPE_PLAY);
-          await this.playAudio(this._timer);
+          await this.playAudio(currentTime);
           const _tt = performance.now() - _ss;
           this._renderTime.video += _tt;
           if (_tt > 20) {
@@ -156,7 +152,7 @@ class Player extends EventEmitter {
           this.app.stop();
           // 显示最后一帧
           const totalFrames = Math.ceil(duration * fps);
-          await this.rootNode.draw((totalFrames - 1) * tick, STATIC.VIEW_TYPE_SEEK);
+          await this.rootNode.draw((totalFrames - 1) / fps, STATIC.VIEW_TYPE_SEEK);
           this.stopAudio();
           this.emit('timeupdate', {currentTime: duration, duration});
           this.emit('ended');
@@ -164,6 +160,10 @@ class Player extends EventEmitter {
 
         // 一定要，不然转场开始时会闪黑一下
         this.app.render();
+
+        // 用audiocontext的时钟来计算，避免声画不同步
+        this._timer += this.audioContext.currentTime - this.lastTime;
+        this.lastTime = this.audioContext.currentTime;
       });
     };
     const { ticker } = this.app;

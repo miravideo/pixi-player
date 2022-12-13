@@ -1,4 +1,5 @@
 import Clip from '../core/clip';
+import STATIC from '../core/static';
 
 class Loop extends Clip {
   constructor(conf) {
@@ -14,6 +15,25 @@ class Loop extends Clip {
       absTime = this.absStartTime + (nodeTime % this._singleDuration);
     }
     return absTime;
+  }
+
+  async draw(absTime, type) {
+    if (!this.onDraw(absTime)) return;
+    const playing = (type === STATIC.VIEW_TYPE_PLAY);
+    const relTime = this.relativeTime(absTime);
+    const dt = relTime - this._singleDuration;
+    if (-1 < dt && dt < 0 && playing) {
+      const _absTime = this.absStartTime + dt;
+      this.allNodes.map(n => {
+        // 正在渲染中的video，不要prepare，避免冲突
+        if (n.type !== 'video' || n.onDraw(relTime)) return;
+        const _dt = _absTime - n.absDrawStartTime;
+        if (-1 < _dt && _dt < 0) {
+          n.material.prepare(n.absDrawStartTime - n.absStartTime, type);
+          // console.log('draw prepare', n.id, {_dt, absTime, _absTime});
+        }
+      });
+    }
   }
 
   annotate(record) {

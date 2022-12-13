@@ -33,7 +33,7 @@ class Video extends Image {
         this.material.prepare(this.absDrawStartTime - this.absStartTime, type);
       } else {
         // pause会清空prepare状态
-        this.material.pause();
+        // this.material.pause();
       }
     }
     return view;
