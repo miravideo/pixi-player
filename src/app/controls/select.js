@@ -79,7 +79,7 @@ class Select extends BaseControl {
       const nodes = evt.records[0].nodes;
       let node = nodes.length > 1 ? new NodeGroup(this.editor, nodes) : nodes[0];
       if (node.groupId) node = this.multiSelect(node);
-      if (node.parent) this.showSelect(node);
+      if (node.parent || node instanceof NodeGroup) this.showSelect(node);
     }
   }
 
