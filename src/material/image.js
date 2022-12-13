@@ -81,13 +81,10 @@ class ImageMaterial extends Material {
     view.currentRenderIdx = idx;
 
     const frame = this.getFrame(idx);
-    if (this.blur > 0) {
-      // 避免模糊后的黑边
-      if (this.node.getConf('blurEdgeFix')) this.drawCanvas(frame, null, true);
-      view.source = this.drawCanvas(frame);
-    } else {
-      view.source = frame;
-    }
+    // if (this.blur > 0) // 无论是否blur都绘制，保存canvas同步，其他地方比如crop可能用到
+    // 避免模糊后的黑边
+    if (this.node.getConf('blurEdgeFix')) this.drawCanvas(frame, null, true);
+    view.source = this.drawCanvas(frame);
   }
 
   drawCanvas(img, canvas=null, disableBlur=false) {

@@ -174,7 +174,7 @@ class Crop extends Move {
       Object.assign(attrs, _attrs);
 
     } else if (!isOrigin) { // resize inner box
-      const _delta = event.target.constraint(event.delta, this.box.anchor);
+      const _delta = event.target.constraint(event.delta, this.box.anchor, false);
       const [_f, _mw, _mh, _scale] = this._controls.cropped.metrics();
 
       Object.assign(attrs, this.getViewAttr({x: _delta.x, y: _delta.y}));
