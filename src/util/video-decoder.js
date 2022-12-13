@@ -370,7 +370,7 @@ class MP4Decoder {
     const { sampleRate, numberOfChannels, sampleSize } = this.aconfig;
     const frames = vtrack.nb_samples;
     const videoDuration = vtrack.duration / vtrack.timescale;
-    const audioDuration = atrack.duration / atrack.timescale;
+    const audioDuration = (atrack)? atrack.duration / atrack.timescale : 0;
     const duration = info.duration ? (info.duration / info.timescale) : videoDuration;
     const fps = (frames / duration).toFixed(6);
     this.meta = { width, height, frames, duration, videoDuration, audioDuration, sampleRate, numberOfChannels, sampleSize, fps };
