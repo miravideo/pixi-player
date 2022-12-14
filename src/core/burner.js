@@ -101,7 +101,7 @@ class Burner extends EventEmitter {
       const sx = timer / cost;
       const prog = Math.min(0.96, 0.96 * (timer / duration));
       progress && progress(prog);
-      // console.log('burning', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
+      player.log('burning', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
     }
 
     player.unlock();
@@ -114,14 +114,18 @@ class Burner extends EventEmitter {
     const url = URL.createObjectURL(new Blob([buffer], { type: "video/mp4" }));
     const size = `${(buffer.byteLength / (1024 ** 2)).toFixed(2)} MiB`;
     const sx = duration / qt;
-    this.emit('done', { id: this.jobId , output: url, qt, speed: sx, size });
+    const res = { 
+      id: this.jobId, url, qt, speed: sx, size, 
+      byteLength: buffer.byteLength
+    };
+    this.emit('done', res);
     player.log('burn done!', `frames: ${i}`, `speed: ${sx.toFixed(2)}x`, `size: ${size}`);
 
     // clean up
     this.worker.terminate();
     this.worker = null;
     this.burning = false;
-    return { url, qt, speed: sx, size };
+    return res;
   }
 
   annotateKeyFrames(player) {

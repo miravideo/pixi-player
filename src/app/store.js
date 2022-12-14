@@ -71,50 +71,6 @@ class Store extends EventEmitter {
     });
   }
 
-  async export(filename) {
-    if (this.loading) return;
-    this.player.emit('burning', true)
-    this.cancelFunc = () => {
-      this.burner.cancel();
-    }
-    this.showLoading(0.001);
-
-    let url, speed;
-    const res = await this.burner.export(this.player, (p) => {
-      runInAction(() => {
-        this.loadingProgress = Math.max(p, 0.001);
-      });
-    });
-
-    if (res) {
-      url = res.url;
-      speed = res.speed;
-    }
-
-    this.player.emit('burning', false);
-    if (!url) {
-      // fail or cancel
-      this.toast('Fail!');
-      this.hideLoading();
-      return;
-    }
-
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = typeof(filename) === 'string' ?
-        (filename.endsWith('.mp4') ? filename : `${filename}.mp4`) :
-        `video_export_${speed.toFixed(2)}x.mp4`;
-    this.containerRef.current.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url);
-      a.remove();
-    }, 1000);
-
-    this.hideLoading();
-  }
-
   async load() {
     if (this.loading) return;
     this.cancelFunc = () => {
@@ -126,6 +82,7 @@ class Store extends EventEmitter {
       runInAction(() => {
         this.loadingProgress = progress;
       });
+      this.player.log('preloading', progress);
     }
 
     this.player.on('playing', () => {
@@ -179,6 +136,49 @@ class Store extends EventEmitter {
     // debug loading progress
     // this.loading = true;
     // this.loadingProgress = 0.3;
+  }
+
+  async export(filename, save=true) {
+    if (this.loading) return;
+    this.player.emit('burning', true);
+    this.cancelFunc = () => {
+      this.burner.cancel();
+    }
+    this.showLoading(0.001);
+
+    const res = await this.burner.export(this.player, (p) => {
+      runInAction(() => {
+        this.loadingProgress = Math.max(p, 0.001);
+      });
+    });
+
+    this.player.emit('burning', false);
+    if (!save) return res;
+
+    const { url, speed } = res || {};
+    if (!url) {
+      // fail or cancel
+      this.toast('Fail!');
+      this.hideLoading();
+      return;
+    }
+
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = typeof(filename) === 'string' ?
+        (filename.endsWith('.mp4') ? filename : `${filename}.mp4`) :
+        `video_export_${speed.toFixed(2)}x.mp4`;
+    this.containerRef.current.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    }, 1000);
+
+    this.hideLoading();
+    // delete res.url;
+    return res;
   }
 
   fit() {

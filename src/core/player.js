@@ -14,15 +14,21 @@ import STATIC from './static';
 const FFT_SIZE = 4096;
 
 import UAParser from 'ua-parser-js';
+
+const SUPPORTED_BROWSERS = ['Edge', 'Chrome', 'Chrome Headless'];
+const SUPPORTED_VERSION = 104;
+
 const BROWSER = new UAParser().getBrowser();
 const IS_HTTPS = ('https:' == document.location.protocol || 'localhost' == document.location.hostname) ? true : false;
-const SUPPORTED = ['Edge', 'Chrome'].includes(BROWSER.name) && BROWSER.major >= 104 && IS_HTTPS && typeof VideoEncoder !== "undefined";
+const SUPPORTED = SUPPORTED_BROWSERS.includes(BROWSER.name) && BROWSER.major >= SUPPORTED_VERSION && IS_HTTPS && typeof VideoEncoder !== "undefined";
 
 class Player extends EventEmitter {
   constructor(opts={}) {
     super();
     this.id = Utils.genUuid();
-    const { fps=24, playbackRate=1.0, audioSampleRate=44100, numberOfChannels=2, volume=1.0 } = opts;
+    const { log=false, playbackRate=1.0, volume=1.0,
+      fps=24, audioSampleRate=44100, numberOfChannels=2 } = opts;
+    this.enableLog = log;
     this.fps = fps;
     this.playbackRate = playbackRate;
     this.audioSampleRate = audioSampleRate;
@@ -40,11 +46,11 @@ class Player extends EventEmitter {
 
   async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view}) {
     if (!SUPPORTED) {
-      let msg = `Could not find VideoEncoder! Please use Chrome (104+)`;
-      if (!['Edge', 'Chrome'].includes(BROWSER.name)) {
-        msg = `Please open in Edge/Chrome with version 104+`;
-      } else if (BROWSER.major < 104) {
-        msg = `Browser version(${BROWSER.major}) too old, should 104+`;
+      let msg = `Could not find VideoEncoder! Please use Chrome (${SUPPORTED_VERSION}+)`;
+      if (!SUPPORTED_BROWSERS.includes(BROWSER.name)) {
+        msg = `Please open in Edge/Chrome with version ${SUPPORTED_VERSION}+`;
+      } else if (BROWSER.major < SUPPORTED_VERSION) {
+        msg = `Browser version(${BROWSER.major}) too old, should ${SUPPORTED_VERSION}+`;
       } else if (!IS_HTTPS) {
         msg = `Only work in HTTPS, please change the url.`;
       }
@@ -112,7 +118,7 @@ class Player extends EventEmitter {
           const _tt = performance.now() - _ss;
           this._renderTime.video += _tt;
           if (_tt > 20) {
-            console.log('slow frame', currentTime.toFixed(3), ' render time:', _tt.toFixed(1));
+            this.log('slow frame', currentTime.toFixed(3), ' render time:', _tt.toFixed(1));
           }
           // this.pptimer.push(_tt);
           this.emit('timeupdate', {currentTime, duration});
@@ -345,9 +351,9 @@ class Player extends EventEmitter {
   }
 
   log(...info) {
-    console.log(...info);
-    if (document.getElementById('player-logs')) {
-      document.getElementById('player-logs').innerHTML += `<br /> ${info.join(' ')}`;
+    if (this.enableLog) console.log(...info);
+    if (document.getElementById('pixi-player-logs')) {
+      document.getElementById('pixi-player-logs').innerHTML += `<br /> ${info.join(' ')}`;
     }
   }
 
