@@ -227,6 +227,7 @@ class Player extends EventEmitter {
       previewRoot.player = this; // bind player
       this.rootNode = previewRoot;
       await this.preload();
+      this.rootNode.children[0].children[0].previewSource = node;
       // todo: crop timeline
       this._timer = node.material.getStartOffset(); // reset timer
     }

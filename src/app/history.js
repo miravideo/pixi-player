@@ -16,7 +16,7 @@ export class Record extends EventEmitter {
   }
 
   get nodes() {
-    return Object.values(this._nodes);
+    return Object.values(this._nodes).filter(x => !x.destroied);
   }
 
   get from() {
@@ -30,7 +30,7 @@ export class Record extends EventEmitter {
   getAttrs(key) {
     const attrs = {};
     this.nodes.map(node => {
-      if (!this._attrs[node.id]) return;
+      if (!this._attrs[node.id] || node.destroied) return;
       attrs[node.id] = {};
       for (const [k, v] of Object.entries(this._attrs[node.id])) {
         attrs[node.id][k] = v[key];
@@ -61,6 +61,7 @@ export class Record extends EventEmitter {
     let changed = false;
     const changedNodes = [], changedAttrs = {};
     nodes.map((node) => {
+      if (node.destroied) return;
       const _attrs = attrs[node.id] || attrs;
       let changeAttr = {}, nodeChanged = false;
       for (const [k, to] of Object.entries(_attrs)) {

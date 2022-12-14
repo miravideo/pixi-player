@@ -41,9 +41,14 @@ class Fit extends Move {
     // if (this.node.getConf('previewable', false)) {
     //   ctls.edit = { box: box.handleBox, styleClass: 'edit' };
     // }
-    if (this.node.getConf('flipable', false)) {
-      ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
-      ctls.flipY = { box: box.handleBox, styleClass: 'flipY' };
+    const flipable = this.node.getConf('flipable', false);
+    if (flipable) {
+      if (flipable.toString().toLowerCase() == 'x' || flipable === true) {
+        ctls.flipX = { box: box.handleBox, styleClass: 'flipX' };
+      }
+      if (flipable.toString().toLowerCase() == 'y' || flipable === true) {
+        ctls.flipY = { box: box.handleBox, styleClass: 'flipY' };
+      }
     }
     return ctls;
   }

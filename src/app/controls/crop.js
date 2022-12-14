@@ -187,7 +187,16 @@ class Crop extends Move {
       attrs.height = absFrame.h * _scale;
     }
 
-    await this.editor.update([this.node], attrs, this.id);
+    const nodes = [this.node];
+    if (this.node.previewSource) {
+      attrs = {
+        [this.node.id]: attrs, 
+        [this.node.previewSource.id]: { pframe: attrs.pframe },
+      };
+      nodes.push(this.node.previewSource);
+    }
+    await this.editor.update(nodes, attrs, this.id);
+
     this.fit();
   }
 

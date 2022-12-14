@@ -71,7 +71,8 @@ class Select extends BaseControl {
     return (evt) => {
       if (!Array.isArray(evt.records) || !evt.records.length || this.editor.controls.move.editMode) return;
       this.hideHover();
-      const nodes = evt.records[0].nodes;
+      // todo: 过滤掉root不是当前root的，避免预览模式下影子node的影响
+      const nodes = evt.records[0].nodes.filter(x => x.root() === this.editor.rootNode);
       let node = nodes.length > 1 ? new NodeGroup(this.editor, nodes) : nodes[0];
       if (node.groupId) node = this.multiSelect(node);
       if (node.parent || node instanceof NodeGroup) this.showSelect(node);
