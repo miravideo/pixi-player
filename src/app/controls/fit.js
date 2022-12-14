@@ -38,9 +38,6 @@ class Fit extends Move {
     if (this.node.getConf('cropable', false)) {
       ctls.crop = { box: box.handleBox, styleClass: 'crop' };
     }
-    // if (this.node.getConf('previewable', false)) {
-    //   ctls.edit = { box: box.handleBox, styleClass: 'edit' };
-    // }
     const flipable = this.node.getConf('flipable', false);
     if (flipable) {
       if (flipable.toString().toLowerCase() == 'x' || flipable === true) {
@@ -82,8 +79,7 @@ class Fit extends Move {
       await this.editor.update([this.node], attrs, this.box.uuid);
       this.box.resize();
     } else if (event.target.hasClass('crop')) {
-      this.editor.enablePreviewMode(this.node);
-      // this.editor.setCropMode(this.node, true);
+      this.editor.setCropMode(this.node, true);
     } else if (event.target.hasClass('edit')) {
       this.editor.setPreviewMode(this.node);
     } else if (event.target.hasClass('flipX')) {
