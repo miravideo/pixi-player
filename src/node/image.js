@@ -5,7 +5,7 @@ import FrameNode from "../mixin/frame";
 import ImageMaterial from "../material/image";
 
 const EDITABLE_CONF = {
-  fitable: true, cropable: true, flipable: "x",
+  fitable: true, cropable: true, flipable: false,
 };
 
 class Image extends Display {
