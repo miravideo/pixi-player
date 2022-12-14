@@ -162,7 +162,7 @@ class Select extends BaseControl {
         // 如果是frame的裁剪模式，就退出
         this.selected.cropMode = false;
       } else {
-        return;
+        return this.editor.enablePreviewMode();
       }
     }
     if (this.selectedBox) this.selectedBox.remove();

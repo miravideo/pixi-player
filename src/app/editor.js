@@ -40,7 +40,7 @@ class Editor extends EventEmitter {
   init() {
     this.events = {
       burning: this.onBlur(),
-      playing: this.onBlur(),
+      playing: this.onPlaying(),
       timeupdate: this.onTimeUpdate(),
       loadedmetadata: this.onReload(),
       resize: this.onResize(),
@@ -145,6 +145,13 @@ class Editor extends EventEmitter {
     return (evt) => {
       this.emit(RESIZE); // fit select box;
       this.emit('timeupdate');
+    }
+  }
+
+  onPlaying() {
+    return (evt) => {
+      if (this.previewMode) return;
+      this.emit(SELECT); // unselect
     }
   }
 
