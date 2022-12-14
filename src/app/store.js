@@ -162,6 +162,7 @@ class Store extends EventEmitter {
       this.hideLoading();
       return;
     }
+    this.player.emit('burned');
 
     const a = document.createElement('a');
     a.style.display = 'none';
@@ -325,7 +326,7 @@ class Store extends EventEmitter {
     this.showCtrlTimer = setTimeout(() => {
       this.showCtrlTimer = null;
       runInAction(() => {
-        if (this.controlShow == show) return;
+        if (this.controlShow === show) return;
         this.controlShow = show;
       });
     }, 100);
