@@ -10,7 +10,7 @@ import Editor from "./app/editor";
 import { uuid } from "./app/utils/data";
 
 const PLAYER_EVENTS = [
-  'burning', 'click', 'keydown', 'keyup', 'resize', 'hover', 'movestart', 'moveend',
+  'burning', 'burned', 'click', 'keydown', 'keyup', 'resize', 'hover', 'movestart', 'moveend',
   'timeupdate', 'ended', 'loadedmetadata', 'seeking', 'seeked', 'playing', 'play', 'pause',
 ];
 
