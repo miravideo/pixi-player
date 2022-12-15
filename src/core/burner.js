@@ -101,7 +101,9 @@ class Burner extends EventEmitter {
       const sx = timer / cost;
       const prog = Math.min(0.96, 0.96 * (timer / duration));
       progress && progress(prog);
-      player.log('burning', (prog * 100).toFixed(2), `${sx.toFixed(2)}x`);
+      if (i % fps === 0) {
+        player.log('burning', `${(prog * 100).toFixed(2)}%`, `${sx.toFixed(2)}x`);
+      }
     }
 
     player.unlock();

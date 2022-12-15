@@ -99,7 +99,7 @@ class Player extends EventEmitter {
       powerPreference: "high-performance",
     });
 
-    await this.preload(cacheRate);
+    await this.preload(cacheRate, onprogress);
 
     // add view
     const rootView = this.rootNode.getView(0, STATIC.VIEW_TYPE_SEEK);
@@ -156,7 +156,7 @@ class Player extends EventEmitter {
     });
   }
 
-  async preload(cacheRate=0) {
+  async preload(cacheRate=0, onprogress) {
     // preload
     await this.rootNode.preload();
     // todo: preload有些不能并行，比如多个video是同一个URL的，会重复下载

@@ -82,7 +82,7 @@ class Store extends EventEmitter {
       runInAction(() => {
         this.loadingProgress = progress;
       });
-      this.player.log('preloading', progress);
+      this.player.log('preloading', `${(progress * 100).toFixed(2)}%`);
     }
 
     this.player.on('playing', () => {
