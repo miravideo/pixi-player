@@ -210,9 +210,15 @@ class Clip extends EventEmitter {
     const key = `${absTime}@${type}`;
     if (!this._drawing[key]) {
       this._drawing[key] = new Promise(async (resolve) => {
+        const ss = performance.now();
         await this.beforeDraw(absTime, type);
         let view = await this.draw(absTime, type);
         view = await this.afterDraw(view, absTime, type);
+        // performance
+        if (this.player._renderTime) {
+          if (!this.player._renderTime[this.id]) this.player._renderTime[this.id] = 0;
+          this.player._renderTime[this.id] += performance.now() - ss;
+        }
         resolve(view);
         delete this._drawing[key];
       });

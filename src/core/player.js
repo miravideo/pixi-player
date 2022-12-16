@@ -37,6 +37,7 @@ class Player extends EventEmitter {
     this._timer = 0;
     this.audioAnalyser = new AudioUtil.Analyser(FFT_SIZE);
     this._audioAnalyserCache = {};
+    this._audioCacheFrames = 20;
     this.lastTime = 0;
   }
 
@@ -105,6 +106,10 @@ class Player extends EventEmitter {
     const rootView = this.rootNode.getView(0, STATIC.VIEW_TYPE_SEEK);
     this.app.stage.addChild(rootView);
 
+    // warm up audio cache
+    await this.getAudioBuffer(0, this._audioCacheFrames * 2);
+
+    let _ss;
     // timer update
     this.tickerCallback = async (delta) => {
       if (this.queue.length > 0) return; // 跳一帧
@@ -112,11 +117,17 @@ class Player extends EventEmitter {
         const { currentTime, duration, fps } = this;
         if (currentTime < duration) {
           // this.pptimer = this.pptimer || [];
-          const _ss = performance.now();
+          // video frame
+          _ss = performance.now();
           await this.rootNode.draw(currentTime, STATIC.VIEW_TYPE_PLAY);
-          await this.playAudio(currentTime);
           const _tt = performance.now() - _ss;
           this._renderTime.video += _tt;
+
+          // audio play
+          _ss = performance.now();
+          await this.playAudio(currentTime);
+          this._renderTime.audio += performance.now() - _ss;
+
           if (_tt > 20) {
             this.log('slow frame', currentTime.toFixed(3), ' render time:', _tt.toFixed(1));
           }
@@ -124,7 +135,7 @@ class Player extends EventEmitter {
           this.emit('timeupdate', {currentTime, duration});
         } else { // ended
           // console.log(this.pptimer.reduce((a,b) => a+b, 0));
-          this.log('render time', JSON.stringify(this._renderTime));
+          this.log('render time', this._renderTime);
           this.app.stop();
           // 显示最后一帧
           const totalFrames = Math.ceil(duration * fps);
@@ -348,6 +359,7 @@ class Player extends EventEmitter {
 
     this.render(); // to stop video playing
     this.emit('pause');
+    if (this._renderTime) this.log('render time', this._renderTime);
   }
 
   log(...info) {
@@ -503,9 +515,7 @@ class Player extends EventEmitter {
 
   async playAudio(start) {
     if (this.volume <= 0) return this.stopAudio();
-    const ss = performance.now();
-    const frames = 20;
-    const { numberOfChannels, fps } = this;
+    const { numberOfChannels, fps, _audioCacheFrames: frames } = this;
     const len = frames / fps;
     // 留25%的安全距离，避免还在播放的部分被替换
     // todo: 但得小心，避免处理时长太长不够
@@ -542,7 +552,6 @@ class Player extends EventEmitter {
       // this.updateLastHalf = !this.updateLastHalf;
       // this.playingAudioEnd += len;
     }
-    this._renderTime.audio += performance.now() - ss;
   }
 
   stopAudio() {
