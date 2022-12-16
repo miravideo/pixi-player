@@ -14,7 +14,7 @@ class Mixin extends Display {
   }
 
   async initMixin(type, mixin) {
-    PluginUtil.extends({plugin: mixin, to: this});
+    PluginUtil.extends({plugin: mixin, to: this, override: true});
     this.mixinType = type;
     this.id = this.conf.id || Utils.genId(type); // re-gen id
     if (this.createNode) await this.initNode();
@@ -34,6 +34,11 @@ class Mixin extends Display {
     this.node = node;
     this.addChild(node);
     node.initzIndex({ zIndex: 1 + this.zIndex - this.basezIndex });
+    await this.nodeUpdated();
+  }
+
+  nodeUpdated() {
+    // should override
   }
 
   defaultVal(key) {

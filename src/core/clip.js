@@ -139,7 +139,7 @@ class Clip extends EventEmitter {
     this.parent = null;
     this.children = [];
     this._drawing = {};
-    this._events = {};
+    this._view_events = {};
     this.init();
   }
 
@@ -278,7 +278,7 @@ class Clip extends EventEmitter {
 
   createView() {}
 
-  updateView() {
+  updateView(senderId, changed) {
     const view = this.parent ? this.getView() : null;
     // clear other type cache
     for (const [k, v] of Object.entries(this._views)) {
@@ -289,6 +289,7 @@ class Clip extends EventEmitter {
       } catch (e) {}
       delete this._views[k];
     }
+    this.emit('updated', { target:this, senderId, changed });
     return view;
   }
 
@@ -826,17 +827,17 @@ class Clip extends EventEmitter {
       return;
     }
     view.interactive = true;
-    if (this._events) {
+    if (this._view_events) {
       // todo: unbind old events;
     }
-    this._events = {
+    this._view_events = {
       hover: this.onHover(),
       movestart: this.onMoveStart(),
       moveend: this.onMoveEnd(),
     };
     for (const [k, evts] of Object.entries(VIEW_EVENTS)) {
       for (const evt of evts) {
-        view.on(evt, this._events[k]);
+        view.on(evt, this._view_events[k]);
       }
     }
   }
@@ -887,6 +888,7 @@ class Clip extends EventEmitter {
     if (this._keyframe) this._keyframe.destroy();
     this._keyframe = null;
     this.parent = null;
+    this._view_events = null;
   }
 }
 
