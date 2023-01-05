@@ -696,8 +696,8 @@ class Clip extends EventEmitter {
       if (aMotion instanceof Array) {
         for (const item of aMotion) {
           const func = (typeof(this[item.funcName]) === 'function') ? this[item.funcName] : this.defaultAmotionAttr
-          const aMotionAttr = func.call(this, item)
-          Object.assign(attr, aMotionAttr);
+          const aMotionAttr = func.call(this, item);
+          if (aMotionAttr) Object.assign(attr, aMotionAttr);
         }
       } else {
         const func = (typeof(this[aMotion.funcName]) === 'function') ? this[aMotion.funcName] : this.defaultAmotionAttr

@@ -9,13 +9,17 @@ if (global) {
 class Analyser {
   static defaultProperties = {
     fftSize: 1024,
+    minDecibels: -80,
+    maxDecibels: -40,
+    frequencyBinCount: 4096
   };
 
   static KEYS = ['max', 'avg', 'min', 'fft', 'gain']
 
-  constructor(fftSize) {
+  constructor(fftSize, audioContext) {
     this.properties = Analyser.defaultProperties;
     this._time = -1;
+    this.audioContext = audioContext;
     if (fftSize) this.properties.fftSize = fftSize;
     this.init();
   }
@@ -32,6 +36,7 @@ class Analyser {
   init() {
     const {
       properties: { fftSize },
+      audioContext
     } = this;
 
     // this.FFTParser = new FFTParser();
@@ -45,13 +50,21 @@ class Analyser {
       this.blackmanTable[i] = this.blackMan(i, fftSize);
     }
 
-    this.buffer = new Float32Array(fftSize);
+    this.buffer = audioContext.createBuffer(1, fftSize, audioContext.sampleRate);
 
     this.last = {};
   }
 
   getFloatTimeDomainData(array) {
-    array.set(this.buffer);
+    array.set(this.buffer.getChannelData(0));
+  }
+
+  log10(val) {
+    return Math.log(val) / Math.LN10;
+  }
+
+  mag2db(val) {
+    return 20 * this.log10(val);
   }
 
   getFloatFrequencyData(array) {
@@ -69,33 +82,65 @@ class Analyser {
     const spectrum = fft(waveform);
 
     for (let i = 0, n = fftSize / 2; i < n; i++) {
-      array[i] = spectrum[i];
+      array[i] = this.mag2db(spectrum[i]);
     }
   }
 
+  normalize(val, min, max) {
+    const n = (val - min) / (max - min);
+
+    return this.clamp(n, 0, 1);
+  }
+
+  clamp(num, min, max) {
+    return num < min ? min : num > max ? max : num;
+  }
+
+  db2mag(val) {
+    return Math.exp(0.1151292546497023 * val);
+  }
+
+  getValue(fft) {
+    const { minDecibels, maxDecibels } = this.properties;
+    const db = minDecibels * (1 - fft / 256);
+
+    return this.normalize(this.db2mag(db), this.db2mag(minDecibels), this.db2mag(maxDecibels));
+  }
+
   getByteFrequencyData(array) {
-    const { fftSize } = this.properties;
-    const spectrum = new Float32Array(fftSize / 2);
+    const { minDecibels, maxDecibels, frequencyBinCount } = this.properties;
+    const spectrum = new Float32Array(frequencyBinCount);
 
     this.getFloatFrequencyData(spectrum);
 
     for (let i = 0, n = spectrum.length; i < n; i++) {
-      array[i] = spectrum[i] * 255 / 2;
+      array[i] = Math.round(this.normalize(spectrum[i], minDecibels, maxDecibels) * 255);
     }
   }
 
-  process(input) {
-    const { fftSize } = this.properties;
-    const merged = new Float32Array(fftSize);
+  downMix(input) {
+    const { length, numberOfChannels } = input;
+    const output = new Float32Array(length);
 
-    // 把所有chanel都相加，并根据fftSize切片
-    for (let chanelData of input) {
-      for (let i = 0; i < fftSize; i++) {
-        merged[i] += chanelData[i] || 0;
+    if (numberOfChannels < 2) {
+      return input.getChannelData(0);
+    }
+
+    for (let i = 0; i < numberOfChannels; i++) {
+      const ch = input.getChannelData(i);
+
+      for (let j = 0; j < length; j++) {
+        output[j] += ch[j];
       }
     }
 
-    this.buffer = merged;
+    return output.map(x => x / numberOfChannels);
+  }
+
+  process(input) {
+    const data = this.downMix(input);
+    this.buffer.copyToChannel(data, 0);
+
     this.updateTimeData();
     this.updateFrequencyData();
     let max = this.td[0], min = this.td[0], total = 0;
@@ -117,7 +162,7 @@ class Analyser {
     this.gain = this.oriFFT.reduce((a, b) => a + b) / this.oriFFT.length;
   }
 
-  slice(start, end, dataType='td') {
+  slice(start, end, dataType='fft') {
     const data = this[dataType];
     if (!data || start >= end) return
     let max = data[0], min = data[0], total = 0;
@@ -132,7 +177,7 @@ class Analyser {
 
       total += data[i];
     }
-    return {max, min, avg: total / (end - start)}
+    return {max: max/ 255, min: min/ 255, avg: total / (end - start) / 255}
   }
 
   movingAverage(key, smooth) {
@@ -145,7 +190,7 @@ class Analyser {
   }
 
   updateTimeData() {
-    this.td = this.buffer;
+    this.getFloatTimeDomainData(this.td);
   }
 
   destroy() {
