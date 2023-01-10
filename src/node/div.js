@@ -1,8 +1,13 @@
 import Container from './container';
+import ViewNode from "../mixin/view";
 
 class Div extends Container {
   constructor(conf) {
     super({type: 'div', ...conf});
+  }
+
+  get viewAttrKeys() { // for view mixin
+    return ['x', 'y', 'scale', 'alpha', 'rotation'];
   }
 
   // annotate(record) {
@@ -23,5 +28,7 @@ class Div extends Container {
     if (this.getConf('group', false)) child.conf.groupId = undefined;
   }
 }
+
+Div.extends(ViewNode);
 
 export default Div;
