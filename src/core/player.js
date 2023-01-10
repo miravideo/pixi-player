@@ -428,7 +428,7 @@ class Player extends EventEmitter {
     if (!this._audioAnalyserCache[time]) {
       this._audioAnalyserCache[time] = new Promise(async (resolve) => {
         // todo 性能优化，搬到webWorker里
-        const audioData = await this.getFrameAudioData(time, {size: Math.round(1 / this.fps * this.audioSampleRate)});
+        const audioData = await this.getFrameAudioData(time, {size: FFT_SIZE});
         if (audioData) {
           this.audioAnalyser.process(audioData)
           this.audioAnalyser._time = time;
