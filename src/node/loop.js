@@ -11,7 +11,11 @@ class Loop extends Clip {
   relativeTime(absTime) {
     if (absTime - this.absStartTime > this.duration) return absTime;
     if (this._singleDuration > 0) {
-      const nodeTime = absTime - this.absStartTime;
+      let nodeTime = absTime - this.absStartTime;
+      if (this.conf.complete) {
+        const compTime = Math.floor(this.duration / this._singleDuration) * this._singleDuration;
+        if (nodeTime > compTime) return this.absStartTime; // hold
+      }
       absTime = this.absStartTime + (nodeTime % this._singleDuration);
     }
     return absTime;
