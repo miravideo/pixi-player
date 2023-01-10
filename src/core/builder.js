@@ -17,6 +17,7 @@ import Graph from "../node/graph";
 import Div from "../node/div";
 import Loop from "../node/loop";
 import Text from "../node/text";
+import Watermark from '../node/watermark';
 
 const TYPES = {
   display: Display,
@@ -35,6 +36,7 @@ const TYPES = {
   audio: Audio,
   graph: Graph,
   text: Text,
+  watermark: Watermark,
 }
 
 const Builder = {

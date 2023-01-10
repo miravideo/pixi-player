@@ -1,6 +1,8 @@
 import Container from './container';
 import ViewNode from "../mixin/view";
 
+const DEFAULT_CONF = { 'x': 0, 'y': 0 };
+
 class Div extends Container {
   constructor(conf) {
     super({type: 'div', ...conf});
@@ -26,6 +28,13 @@ class Div extends Container {
   removeChild(child) {
     super.removeChild(child);
     if (this.getConf('group', false)) child.conf.groupId = undefined;
+  }
+
+  defaultVal(key) {
+    if (DEFAULT_CONF[key] !== undefined) {
+      return DEFAULT_CONF[key];
+    }
+    return super.defaultVal(key);
   }
 }
 

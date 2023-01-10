@@ -9,6 +9,7 @@ import AudioUtil from '../util/audio';
 import ImageUtils from '../util/image';
 // import VideoHolder from '../util/video';
 import VideoSource from '../util/video-source';
+import Watermark from '../node/watermark';
 import STATIC from './static';
 
 const FFT_SIZE = 4096;
@@ -45,7 +46,7 @@ class Player extends EventEmitter {
     await node.initMixin(type, Builder.mixin[type]);
   }
 
-  async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view}) {
+  async init({value, rootNode, mixin, backgroundColor, onprogress, useCache, view, watermark}) {
     if (!SUPPORTED) {
       let msg = `Could not find VideoEncoder! Please use Chrome (${SUPPORTED_VERSION}+)`;
       if (!SUPPORTED_BROWSERS.includes(BROWSER.name)) {
@@ -99,6 +100,17 @@ class Player extends EventEmitter {
       sharedTicker: false,
       powerPreference: "high-performance",
     });
+
+    if (watermark) {
+      let {node: wmNode, cachePromise} = Builder.from(watermark);
+      await cachePromise;
+      if (wmNode.type !== 'watermark') {
+        const _wmNode = new Watermark({ duration: '100%' });
+        _wmNode.addChild(wmNode);
+        wmNode = _wmNode;
+      }
+      this.rootNode.addChild(wmNode);
+    }
 
     await this.preload(cacheRate, onprogress);
 
