@@ -21,7 +21,7 @@ const AnimationNode = {
     return attr
   },
   defaultAmotionAttr(args) {
-    const {key, minFrequency=0, maxFrequency=1024, amp = 1, threshold = 0, dataType, smooth=0} = args;
+    const {key, minFrequency=0, maxFrequency=1024, amp = 1, threshold = 0, dataType='avg', smooth=0} = args;
     if (!key || !dataType || (maxFrequency <= minFrequency)) return
     if (!this.lastAudioData) {
       this.lastAudioData = {}
@@ -34,11 +34,13 @@ const AnimationNode = {
       data = this.player.audioAnalyser[dataType];
     }
     if (!data) return
+
+    const newValue = data * (1 - smooth) + (this.lastAudioData[key] || 0) * smooth;
+    this.lastAudioData[key] = newValue;
+    data = newValue
+    const {key:_key, value} = this.toAbs(key, amp * data)
     if (data >= threshold) {
-      const {key:_key, value} = this.toAbs(key, amp * data)
-      const newValue = value * (1 - smooth) + (this.lastAudioData[_key] || 0) * smooth;
-      this.lastAudioData[_key] = newValue;
-      return {[_key]: newValue}
+      return {[_key]: value}
     }
   },
   /**
@@ -58,7 +60,7 @@ const AnimationNode = {
       relative = true;
       if (KeyFrames.D_LIST.includes(key)) {
         // 透明度和scale一直是相对值
-        result = oriValue * newValue;
+        result = oriValue + newValue;
       } else {
         result = oriValue + newValue;
       }

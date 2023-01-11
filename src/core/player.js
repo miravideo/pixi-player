@@ -12,7 +12,7 @@ import VideoSource from '../util/video-source';
 import Watermark from '../node/watermark';
 import STATIC from './static';
 
-const FFT_SIZE = 4096;
+const FFT_SIZE = 8192;
 
 import UAParser from 'ua-parser-js';
 
@@ -36,7 +36,6 @@ class Player extends EventEmitter {
     this.numberOfChannels = numberOfChannels;
     this.volume = volume;
     this._timer = 0;
-    this.audioAnalyser = new AudioUtil.Analyser(FFT_SIZE);
     this._audioAnalyserCache = {};
     this._audioCacheFrames = 20;
     this.lastTime = 0;
@@ -90,6 +89,7 @@ class Player extends EventEmitter {
     rootNode.player = this; // bind player
 
     this.audioContext = new AudioContext({sampleRate: this.audioSampleRate});
+    this.audioAnalyser = new AudioUtil.Analyser(FFT_SIZE, this.audioContext);
 
     this.app = new Application({
       width: this.rootNode.width,
@@ -234,9 +234,9 @@ class Player extends EventEmitter {
         const { flipX, flipY } = node.conf;
         const nodeConf = {
           type: node.type, src: node.material.src, duration, width, height,
-          // flipX, flipY, 
-          cropable: true, fullCrop: true, 
-          flipable: false, movable: false, rotatable: false, fitable: false, resizable: false, 
+          // flipX, flipY,
+          cropable: true, fullCrop: true,
+          flipable: false, movable: false, rotatable: false, fitable: false, resizable: false,
         };
 
         const pframe = node.pframe;
@@ -272,12 +272,12 @@ class Player extends EventEmitter {
     await this.render(); // 重新render
     if (this._rootNode) this.rootNode.previewMode = true;
     this.emit('loadedmetadata', {
-      duration: this.rootNode.duration, 
-      width: this.rootNode.width, 
+      duration: this.rootNode.duration,
+      width: this.rootNode.width,
       height: this.rootNode.width,
     });
     this.emit('timeupdate', {
-      currentTime: 0, 
+      currentTime: 0,
       duration: this.rootNode.duration
     });
     this.emit('resize');
@@ -428,9 +428,9 @@ class Player extends EventEmitter {
     if (!this._audioAnalyserCache[time]) {
       this._audioAnalyserCache[time] = new Promise(async (resolve) => {
         // todo 性能优化，搬到webWorker里
-        const audioData = await this.getFrameAudioData(time, {size: Math.round(1 / this.fps * this.audioSampleRate)});
+        const audioData = await this.getFrameAudioData(time, {size: FFT_SIZE});
         if (audioData) {
-          this.audioAnalyser.process([audioData.getChannelData(0), audioData.getChannelData(1)])
+          this.audioAnalyser.process(audioData)
           this.audioAnalyser._time = time;
         }
         resolve();
@@ -487,8 +487,8 @@ class Player extends EventEmitter {
       // todo: extract支持直接出图，就不用再转绘一次了
       const canvas = burner.plugins.extract.canvas(renderTexture);
       // todo: frame of bounds?
-      const frame = node.isViewContainer ? 
-        { x: 0, y: 0, w: width, h: height } : 
+      const frame = node.isViewContainer ?
+        { x: 0, y: 0, w: width, h: height } :
         { x: view.x, y: view.y, w: view.width, h: view.height };
       return ImageUtils.subImage(canvas, frame, opts);
     });
