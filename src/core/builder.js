@@ -100,7 +100,10 @@ const Builder = {
     return { node, cachePromise: Promise.all(cachePromise) };
   },
   fromXml(xml, opt, progress) {
-    const data = XMLParser.parseXml(xml);
+    let data = XMLParser.parseXml(xml);
+    if (data?.type === 'miraml' && data.children[0]) {
+      data = data.children[0]; // change root node
+    }
     return this.genNode(data, opt, progress);
   },
   from(value, opt, progress=null) {
