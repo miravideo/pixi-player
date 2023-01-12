@@ -147,7 +147,7 @@ class Store extends EventEmitter {
 
     const { save=true } = opts;
     // { quanlity:'high', fps:30, size: { width: 1920, height: 1080 }, ...opts}
-    const burner = new Burner({ quanlity:'high', ...opts}); 
+    const burner = new Burner(opts); 
 
     this.cancelFunc = () => {
       burner.cancel();
