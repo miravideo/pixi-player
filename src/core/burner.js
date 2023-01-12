@@ -38,9 +38,25 @@ class Burner extends EventEmitter {
     this.cancelled = false;
 
     const burnStart = performance.now();
+    const { quanlity, fps: burnFPS, size } = this.opts;
+
+    let _fps, _width, _height;
+    // set fps
+    if (!isNaN(burnFPS) && burnFPS >= 10 && burnFPS <= 60) {
+      _fps = player.fps;
+      player.fps = burnFPS;
+    }
+
+    // resize
+    if (size && size?.width > 0 && size?.height > 0
+       && size.width !== player.width && size.height !== player.height
+       && Math.abs((size.width / size.height) - (player.width / player.height)) < 0.01) {
+      _width = player.width;
+      _height = player.height;
+      await player.resize(size.width, size.height);
+    }
+
     const { audioSampleRate, numberOfChannels, width, height, duration, fps } = player;
-    // todo: quanlity for bitsrate
-    const { quanlity } = this.opts;
 
     this.worker = new Worker(WORKER_URL);
     await this.workerExec({
@@ -106,6 +122,10 @@ class Burner extends EventEmitter {
       }
     }
 
+    // reverse fps, size...
+    if (_fps) player.fps = _fps;
+    if (_width && _height) await player.resize(_width, _height);
+
     player.unlock();
     if (this.cancelled) return;
     const { buffer } = await this.workerExec({ method: 'flush' });
@@ -114,14 +134,14 @@ class Burner extends EventEmitter {
     if (!buffer) return this.cancel();
     const qt = (performance.now() - burnStart) * 0.001;
     const url = URL.createObjectURL(new Blob([buffer], { type: "video/mp4" }));
-    const size = `${(buffer.byteLength / (1024 ** 2)).toFixed(2)} MiB`;
+    const filesize = `${(buffer.byteLength / (1024 ** 2)).toFixed(2)} MiB`;
     const sx = duration / qt;
     const res = { 
-      id: this.jobId, url, qt, speed: sx, size, 
+      id: this.jobId, url, qt, speed: sx, size: filesize, 
       byteLength: buffer.byteLength
     };
     this.emit('done', res);
-    player.log('burn done!', `frames: ${i}`, `speed: ${sx.toFixed(2)}x`, `size: ${size}`);
+    player.log('burn done!', `frames: ${i}`, `speed: ${sx.toFixed(2)}x`, `size: ${filesize}`);
 
     // clean up
     this.worker.terminate();

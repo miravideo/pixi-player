@@ -116,7 +116,10 @@ class Canvas extends Container {
     this.width = width;
     this.height = height;
     this.clearViewCache();
-    this.allNodes.map(n => n.clearViewCache());
+    this.allNodes.map(n => {
+      n.clearViewCache();
+      n._keyframe = undefined; // 关键帧数据也缓存了px之后的值，也需要清空
+    });
   }
 
   toMiraML(asTemplate=true, indent=2) {

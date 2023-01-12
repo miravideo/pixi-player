@@ -388,10 +388,10 @@ const Controls = observer(({store}) => {
           <Time>{Utils.formatTime(store.currentTime)} / {Utils.formatTime(store.duration)}</Time>
         }
         <Space></Space>
-        { !store.canvasStyle.ctrWidth || store.canvasStyle.ctrWidth < 250 ? null :
+        { store.hideSoundButton || !store.canvasStyle.ctrWidth || store.canvasStyle.ctrWidth < 250 ? null :
           <Button className={store.muted ? 'sound-off-button' : 'sound-on-button'} onClick={() => store.toggleMute()}></Button>
         }
-        { !store.canvasStyle.ctrWidth || store.canvasStyle.ctrWidth < 300 ? null :
+        { store.hideExportButton || !store.canvasStyle.ctrWidth || store.canvasStyle.ctrWidth < 300 ? null :
           <Button className="export-button" onClick={() => store.export()}></Button>
         }
         { store.hideMenuButton ? null : 

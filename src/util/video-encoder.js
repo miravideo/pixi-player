@@ -54,6 +54,7 @@ class MP4Encoder {
       // framerate: fps, // 其实encoder应该不管fps啊，每帧都有timestamp和duration的
       bitrate: bitrate || Math.round(width * height * fps * br.v),
     }
+    // console.log('encoderOptions', JSON.stringify(encoderOptions));
 
     const trackOptions = {
       name: "Video created with PIXI-Player",

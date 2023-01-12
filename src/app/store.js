@@ -42,6 +42,8 @@ class Store extends EventEmitter {
     this.timeHandlerShow = false;
     this.controlShow = true;
 
+    this.hideSoundButton = !!opt.hideSoundButton;
+    this.hideExportButton = !!opt.hideExportButton;
     this.hideMenuButton = !!opt.hideMenuButton;
     this.showMenu = undefined;
     this.toastMsg = undefined;
@@ -49,7 +51,6 @@ class Store extends EventEmitter {
 
     // player
     this.player = new Player(opt);
-    this.burner = new Burner(opt);
     makeObservable(this, {
       loading: observable,
       loaded: observable,
@@ -64,6 +65,8 @@ class Store extends EventEmitter {
       timeHandlerShow: observable,
       controlShow: observable,
 
+      hideSoundButton: observable,
+      hideExportButton: observable,
       hideMenuButton: observable,
       showMenu: observable,
       toastMsg: observable,
@@ -138,19 +141,25 @@ class Store extends EventEmitter {
     // this.loadingProgress = 0.3;
   }
 
-  async export(filename, save=true) {
+  async export(filename, opts={}) {
     if (this.loading) return;
     this.player.emit('burning', true);
+
+    const { save=true } = opts;
+    // { quanlity:'high', fps:30, size: { width: 1920, height: 1080 }, ...opts}
+    const burner = new Burner({ quanlity:'high', ...opts}); 
+
     this.cancelFunc = () => {
-      this.burner.cancel();
+      burner.cancel();
     }
     this.showLoading(0.001);
 
-    const res = await this.burner.export(this.player, (p) => {
+    const res = await burner.export(this.player, (p) => {
       runInAction(() => {
         this.loadingProgress = Math.max(p, 0.001);
       });
     });
+    burner.destroy();
 
     this.player.emit('burning', false);
     if (!save) return res;
@@ -460,8 +469,6 @@ class Store extends EventEmitter {
     this.editorRef = null;
     if (this.player) this.player.destroy();
     this.player = null;
-    if (this.burner) this.burner.destroy();
-    this.burner = null;
   }
 }
 

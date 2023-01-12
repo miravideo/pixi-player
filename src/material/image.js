@@ -91,6 +91,7 @@ class ImageMaterial extends Material {
     if (!canvas) canvas = this.canvas;
     if (!canvas) return; // may destroyed
     const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const { blur } = this; // blur
     if (blur > 0 && !disableBlur) ctx.filter = `blur(${blur}px)`;
     // 如果是ImageData, 直接put会覆盖老的内容，还可能让blur无效
