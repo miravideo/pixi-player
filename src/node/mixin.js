@@ -80,6 +80,10 @@ class Mixin extends Display {
     return view;
   }
 
+  async cacheRemoteUrl(url) {
+    return await XhrUtil.getCachedURL(url, this.player.id)
+  }
+
   async getRemoteData(url, parseJson = true) {
     try {
       const resp = await XhrUtil.getRemote(url, this.player.id);
