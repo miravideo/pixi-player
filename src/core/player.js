@@ -129,7 +129,7 @@ class Player extends EventEmitter {
         this._skipFrame++;
         if (this._skipFrame > SKIP_LIMIT) {
           this.stopAudio();
-          const step = 0.01;
+          const step = 0.02;
           this._pending = !this._pending ? step : this._pending + ((1 - this._pending) * step);
           this.emit('pending', { progress: this._pending });
         }
