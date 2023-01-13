@@ -91,8 +91,8 @@ export class PlayerUI extends EventEmitter {
     this.store.togglePlay();
   }
 
-  async export(filename, save=true) {
-    return this.store.export(filename, save);
+  async export(filename, opts) {
+    return this.store.export(filename, opts);
   }
 
   get core() {
