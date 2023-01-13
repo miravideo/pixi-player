@@ -91,6 +91,10 @@ class Store extends EventEmitter {
     this.player.on('playing', () => {
       this.focus();
       runInAction(() => { this.playing = true });
+    }).on('pending', (evt) => {
+      this.showLoading(evt.progress);
+    }).on('resume', () => {
+      this.hideLoading();
     }).on('pause', () => {
       this.focus();
       runInAction(() => { this.playing = false });

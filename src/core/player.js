@@ -13,6 +13,7 @@ import Watermark from '../node/watermark';
 import STATIC from './static';
 
 const FFT_SIZE = 8192;
+const SKIP_LIMIT = 20;
 
 import UAParser from 'ua-parser-js';
 
@@ -124,7 +125,22 @@ class Player extends EventEmitter {
     let _ss;
     // timer update
     this.tickerCallback = async (delta) => {
-      if (this.queue.length > 0) return; // 跳一帧
+      if (this.queue.length > 0) {
+        this._skipFrame++;
+        if (this._skipFrame > SKIP_LIMIT) {
+          this.stopAudio();
+          const step = 0.01;
+          this._pending = !this._pending ? step : this._pending + ((1 - this._pending) * step);
+          this.emit('pending', { progress: this._pending });
+        }
+        return; // 跳一帧
+      } else {
+        this._skipFrame = 0;
+        if (this._pending) {
+          this._pending = false;
+          this.emit('resume');
+        }
+      }
       this.queue.enqueue(async () => {
         const { currentTime, duration, fps } = this;
         if (currentTime < duration) {
@@ -133,12 +149,12 @@ class Player extends EventEmitter {
           _ss = performance.now();
           await this.rootNode.draw(currentTime, STATIC.VIEW_TYPE_PLAY);
           const _tt = performance.now() - _ss;
-          this._renderTime.video += _tt;
+          this._renderTime.VIDEO_SUM += _tt;
 
           // audio play
           _ss = performance.now();
           await this.playAudio(currentTime);
-          this._renderTime.audio += performance.now() - _ss;
+          this._renderTime.AUDIO_SUM += performance.now() - _ss;
 
           if (_tt > 20) {
             this.log('slow frame', currentTime.toFixed(3), ' render time:', _tt.toFixed(1));
@@ -338,7 +354,8 @@ class Player extends EventEmitter {
 
   async play() {
     if (!this.app || this.playing || this.locked) return;
-    this._renderTime = { video: 0, audio: 0 };
+    this._renderTime = { VIDEO_SUM: 0, AUDIO_SUM: 0 };
+    this._skipFrame = 0;
     this.lastTime = this.audioContext.currentTime;
     if (this.currentTime > this.duration) {
       // reset to start
